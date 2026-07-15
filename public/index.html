@@ -9,10 +9,15 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <header>
-            <h1>💰 FinanceFlow</h1>
-            <p>Your money, organized beautifully.</p>
-        </header>
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+     <div>
+        <h1>💰 FinanceFlow</h1>
+        <p>Welcome back, <span id="user-display-name" style="color: var(--primary); font-weight: 600;">User</span>!</p>
+    </div>
+    <button id="btn-logout" style="background: none; border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; font-weight: 600; color: var(--danger); cursor: pointer; transition: background 0.2s;">
+        Sign Out
+    </button>
+    </header>
 
         <div class="metrics-grid">
             <div class="metric-card">
