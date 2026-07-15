@@ -1,154 +1,13 @@
-// document.addEventListener("DOMContentLoaded", () => {
-//     const form = document.getElementById("transaction-form");
-//     const tableBody = document.getElementById("transaction-rows");
-//     const balanceEl = document.getElementById("total-balance");
-//     const incomeEl = document.getElementById("total-income");
-//     const expenseEl = document.getElementById("total-expenses");
-    
-//     // Edit flow elements
-//     const editIdInput = document.getElementById("edit-id");
-//     const submitBtn = document.getElementById("btn-submit");
-//     const cancelBtn = document.getElementById("btn-cancel");
-
-//     // Set form date input default to today
-//     document.getElementById("date").value = new Date().toISOString().split('T')[0];
-
-//     // Fetch transactions from the backend server
-//     async function loadTransactions() {
-//         const response = await fetch('/api/transactions');
-//         const transactions = await response.json();
-//         updateUI(transactions);
-//     }
-
-//     // Refresh dashboard values and rebuild the history list
-//     function updateUI(transactions) {
-//         tableBody.innerHTML = "";
-//         let totalIncome = 0;
-//         let totalExpense = 0;
-
-//         transactions.forEach(t => {
-//             if (t.type === 'income') totalIncome += t.amount;
-//             if (t.type === 'expense') totalExpense += t.amount;
-
-//             const row = document.createElement("tr");
-//             row.innerHTML = `
-//                 <td>${t.date}</td>
-//                 <td>${t.category}</td>
-//                 <td><span class="tag ${t.type}">${t.type}</span></td>
-//                 <td style="color: ${t.type === 'income' ? 'var(--success)' : 'var(--danger)'}">
-//                     ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
-//                 </td>
-//                 <td>
-//                     <button class="edit-btn" data-id="${t.id}" data-type="${t.type}" data-category="${t.category}" data-amount="${t.amount}" data-date="${t.date}">Edit</button>
-//                     <button class="delete-btn" data-id="${t.id}">Delete</button>
-//                 </td>
-//             `;
-//             tableBody.appendChild(row);
-//         });
-
-//         const currentBalance = totalIncome - totalExpense;
-
-//         balanceEl.textContent = `${currentBalance < 0 ? '-' : ''}$${Math.abs(currentBalance).toFixed(2)}`;
-//         incomeEl.textContent = `$${totalIncome.toFixed(2)}`;
-//         expenseEl.textContent = `$${totalExpense.toFixed(2)}`;
-
-//         // Attach action events to dynamic buttons
-//         document.querySelectorAll(".delete-btn").forEach(btn => {
-//             btn.addEventListener("click", deleteTransaction);
-//         });
-
-//         document.querySelectorAll(".edit-btn").forEach(btn => {
-//             btn.addEventListener("click", startEditTransaction);
-//         });
-//     }
-
-//     // Enter Edit Mode (Populate form & change colors to Yellow)
-//     function startEditTransaction(e) {
-//         const btn = e.target;
-//         editIdInput.value = btn.getAttribute("data-id");
-        
-//         document.getElementById("type").value = btn.getAttribute("data-type");
-//         document.getElementById("category").value = btn.getAttribute("data-category");
-//         document.getElementById("amount").value = btn.getAttribute("data-amount");
-//         document.getElementById("date").value = btn.getAttribute("data-date");
-
-//         // Swap button styles to yellow edit state
-//         submitBtn.textContent = "Update Transaction";
-//         submitBtn.classList.add("editing");
-//         cancelBtn.style.display = "block";
-//     }
-
-//     // Exit Edit Mode and Reset Form
-//     function cancelEdit() {
-//         form.reset();
-//         editIdInput.value = "";
-//         document.getElementById("date").value = new Date().toISOString().split('T')[0];
-        
-//         // Restore standard button styling
-//         submitBtn.textContent = "Save Transaction";
-//         submitBtn.classList.remove("editing");
-//         cancelBtn.style.display = "none";
-//     }
-
-//     cancelBtn.addEventListener("click", cancelEdit);
-
-//     // Save or Update transaction via API
-//     form.addEventListener("submit", async (e) => {
-//         e.preventDefault();
-//         const type = document.getElementById("type").value;
-//         const category = document.getElementById("category").value;
-//         const amount = document.getElementById("amount").value;
-//         const date = document.getElementById("date").value;
-//         const editId = editIdInput.value;
-
-//         let url = '/api/transactions';
-//         let method = 'POST';
-
-//         // Switch payload configurations if editing
-//         if (editId) {
-//             url = `/api/transactions/${editId}`;
-//             method = 'PUT';
-//         }
-
-//         const response = await fetch(url, {
-//             method: method,
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify({ type, category, amount, date })
-//         });
-
-//         if (response.ok) {
-//             cancelEdit();
-//             loadTransactions();
-//         }
-//     });
-
-//     // Delete transaction via API
-//     async function deleteTransaction(e) {
-//         const id = e.target.getAttribute("data-id");
-//         const response = await fetch(`/api/transactions/${id}`, {
-//             method: 'DELETE'
-//         });
-
-//         if (response.ok) {
-//             loadTransactions();
-//         }
-//     }
-
-//     loadTransactions();
-// });
-
-
-// the code above they wasnt a login/logout and session so the one below there is sessions 
-
-
 document.addEventListener("DOMContentLoaded", () => {
+    // Render Icons immediately
+    lucide.createIcons();
+
     const form = document.getElementById("transaction-form");
     const tableBody = document.getElementById("transaction-rows");
     const balanceEl = document.getElementById("total-balance");
     const incomeEl = document.getElementById("total-income");
     const expenseEl = document.getElementById("total-expenses");
     
-    // Edit state management variables
     const editIdInput = document.getElementById("edit-id");
     const submitBtn = document.getElementById("btn-submit");
     const cancelBtn = document.getElementById("btn-cancel");
@@ -156,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Standard Default Date set to Today
     document.getElementById("date").value = new Date().toISOString().split('T')[0];
 
-    // Verify Session State & Render Admin Links
     async function checkAuthSession() {
         try {
             const response = await fetch('/api/auth/status');
@@ -165,21 +23,18 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.authenticated) {
                 document.getElementById("user-display-name").textContent = data.user.name;
                 
-                // Show admin button if role equals Admin
                 if (data.user.role === 'admin') {
-                    document.getElementById("admin-nav-btn").style.display = "inline-block";
+                    document.getElementById("admin-nav-btn").style.display = "flex";
                 }
                 loadTransactions(); 
             } else {
                 window.location.href = "/login.html"; 
             }
         } catch (error) {
-            console.error("Auth status verification failed:", error);
             window.location.href = "/login.html";
         }
     }
 
-    // Sign out Trigger
     document.getElementById("btn-logout").addEventListener("click", async () => {
         try {
             const response = await fetch('/api/auth/logout', { method: 'POST' });
@@ -191,46 +46,66 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Load user-specific transaction list
     async function loadTransactions() {
         const response = await fetch('/api/transactions');
         const transactions = await response.json();
         updateUI(transactions);
     }
 
-    // Compute metrics and update visual lists
     function updateUI(transactions) {
         tableBody.innerHTML = "";
         let totalIncome = 0;
         let totalExpense = 0;
 
-        transactions.forEach(t => {
-            if (t.type === 'income') totalIncome += t.amount;
-            if (t.type === 'expense') totalExpense += t.amount;
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${t.date}</td>
-                <td>${t.category}</td>
-                <td><span class="tag ${t.type}">${t.type}</span></td>
-                <td style="color: ${t.type === 'income' ? 'var(--success)' : 'var(--danger)'}">
-                    ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
-                </td>
-                <td>
-                    <button class="edit-btn" data-id="${t.id}" data-type="${t.type}" data-category="${t.category}" data-amount="${t.amount}" data-date="${t.date}">Edit</button>
-                    <button class="delete-btn" data-id="${t.id}">Delete</button>
-                </td>
+        if (transactions.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                        No transactions registered yet. Record your first log on the left.
+                    </td>
+                </tr>
             `;
-            tableBody.appendChild(row);
-        });
+        } else {
+            transactions.forEach(t => {
+                if (t.type === 'income') totalIncome += t.amount;
+                if (t.type === 'expense') totalExpense += t.amount;
+
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-all";
+                row.innerHTML = `
+                    <td class="py-4 text-sm font-medium text-slate-600 dark:text-slate-300">${t.date}</td>
+                    <td class="py-4 text-sm font-semibold text-slate-800 dark:text-slate-100">${t.category}</td>
+                    <td class="py-4 text-sm">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
+                            t.type === 'income' 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                        }">
+                            ${t.type}
+                        </span>
+                    </td>
+                    <td class="py-4 text-sm font-bold ${t.type === 'income' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}">
+                        ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
+                    </td>
+                    <td class="py-4 text-sm text-right space-x-2">
+                        <button class="edit-btn text-indigo-500 hover:text-indigo-400 font-semibold transition-all" data-id="${t.id}" data-type="${t.type}" data-category="${t.category}" data-amount="${t.amount}" data-date="${t.date}">
+                            Edit
+                        </button>
+                        <button class="delete-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${t.id}">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
 
         const currentBalance = totalIncome - totalExpense;
 
         balanceEl.textContent = `${currentBalance < 0 ? '-' : ''}$${Math.abs(currentBalance).toFixed(2)}`;
-        incomeEl.textContent = `$${totalIncome.toFixed(2)}`;
-        expenseEl.textContent = `$${totalExpense.toFixed(2)}`;
+        incomeEl.textContent = `+$${totalIncome.toFixed(2)}`;
+        expenseEl.textContent = `-$${totalExpense.toFixed(2)}`;
 
-        // Attach action events to dynamic buttons
         document.querySelectorAll(".delete-btn").forEach(btn => {
             btn.addEventListener("click", deleteTransaction);
         });
@@ -240,7 +115,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Populate input fields in the yellow Edit Mode
     function startEditTransaction(e) {
         const btn = e.target;
         editIdInput.value = btn.getAttribute("data-id");
@@ -252,11 +126,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("form-title").textContent = "Edit Transaction";
         submitBtn.textContent = "Update Transaction";
-        submitBtn.classList.add("editing");
-        cancelBtn.style.display = "block";
+        submitBtn.className = "w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 shadow-lg shadow-amber-500/10 transition-all active:scale-[0.98]";
+        cancelBtn.classList.remove("hidden");
     }
 
-    // Exit Edit Mode and Restore Standard Interface
     function cancelEdit() {
         form.reset();
         editIdInput.value = "";
@@ -264,13 +137,12 @@ document.addEventListener("DOMContentLoaded", () => {
         
         document.getElementById("form-title").textContent = "New Transaction";
         submitBtn.textContent = "Save Transaction";
-        submitBtn.classList.remove("editing");
-        cancelBtn.style.display = "none";
+        submitBtn.className = "w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/10 transition-all active:scale-[0.98]";
+        cancelBtn.classList.add("hidden");
     }
 
     cancelBtn.addEventListener("click", cancelEdit);
 
-    // Save or Update transaction submission handler
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const type = document.getElementById("type").value;
@@ -299,7 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Delete transaction executioner
     async function deleteTransaction(e) {
         const id = e.target.getAttribute("data-id");
         const response = await fetch(`/api/transactions/${id}`, {
@@ -311,6 +182,5 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Verify session immediately upon layout loading
     checkAuthSession();
 });

@@ -1,153 +1,196 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanceFlow | Admin Command Center</title>
-    <link rel="stylesheet" href="style.css">
+    <title>FinanceFlow | Admin Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
-        :root {
-            --admin-purple: #6366f1;
-            --admin-indigo: #4f46e5;
-            --admin-dark: #1e1b4b;
-        }
-        .admin-header {
-            background: linear-gradient(135deg, var(--admin-dark), var(--admin-indigo));
-            color: white;
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .admin-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-        @media (max-width: 768px) {
-            .admin-grid { grid-template-columns: 1fr; }
-        }
-        .chart-wrapper {
-            position: relative;
-            height: 240px;
-            width: 100%;
-        }
-        .btn-inspect {
-            background-color: var(--admin-purple);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.8rem;
-            margin-right: 5px;
-        }
-        .btn-inspect:hover {
-            background-color: var(--admin-indigo);
-        }
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body>
-    <div class="container">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+
+    <!-- Glow Backdrops (Dark Mode Only) -->
+    <div class="hidden dark:block absolute top-0 left-1/3 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="hidden dark:block absolute bottom-0 right-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         
-        <header class="admin-header">
-            <div>
-                <h1 style="color: white; margin-bottom: 4px;">🛡️ Admin Command Center</h1>
-                <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">System Performance and User Operations</p>
+        <!-- Interactive Admin Control Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-slate-800/80">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-500/10 p-2.5 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30 text-indigo-500 dark:text-indigo-400">
+                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-indigo-300 bg-clip-text text-transparent">Admin Command Center</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Secure analytics engine & user provisioning controls.</p>
+                </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <a href="/index.html" class="btn-cancel" style="background-color: rgba(255,255,255,0.15); color: white; border: none; width: auto; margin: 0; padding: 10px 18px; text-decoration: none; display: inline-block; font-size: 0.9rem; font-weight: 600; border-radius: 8px; text-align: center;">
-                    User Dashboard
+
+            <!-- Header Controls -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <button id="theme-toggle" class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all">
+                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="w-5 h-5 hidden"></i>
+                    <i id="theme-toggle-light-icon" data-lucide="sun" class="w-5 h-5 hidden"></i>
+                </button>
+                
+                <a href="/index.html" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> User Dashboard
                 </a>
-                <button id="btn-admin-logout" class="btn-cancel" style="background-color: #ef4444; color: white; border: none; width: auto; margin: 0; padding: 10px 18px; font-weight: 600; font-size: 0.9rem;">
-                    Sign Out
+                
+                <button id="btn-admin-logout" class="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-red-600/10">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
                 </button>
             </div>
         </header>
 
-        <div class="admin-grid">
+        <!-- Admin Control Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
             
-            <div class="card">
-                <h2>Create New User Account</h2>
-                <form id="admin-user-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-                    <div class="input-group" style="margin: 0;">
-                        <input type="text" id="admin-reg-name" placeholder="Full Name" required>
+            <!-- Provisioning Center Card -->
+            <div class="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+                    <i data-lucide="user-plus" class="text-indigo-500 w-5 h-5"></i> Create User Account
+                </h2>
+                
+                <form id="admin-user-form" class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</label>
+                        <input type="text" id="admin-reg-name" placeholder="John Doe" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all text-slate-900 dark:text-slate-100" required>
                     </div>
-                    <div class="input-group" style="margin: 0;">
-                        <input type="email" id="admin-reg-email" placeholder="Email Address" required>
+
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Email Address</label>
+                        <input type="email" id="admin-reg-email" placeholder="john@flow.com" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all text-slate-900 dark:text-slate-100" required>
                     </div>
-                    <div class="input-group" style="margin: 0;">
-                        <input type="password" id="admin-reg-password" placeholder="Password (Minimum 6 characters)" required>
+
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Security Password</label>
+                        <input type="password" id="admin-reg-password" placeholder="Min. 6 Characters" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all text-slate-900 dark:text-slate-100" required>
                     </div>
-                    <div class="input-group" style="margin: 0;">
-                        <select id="admin-reg-role">
+
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Assigned Privilege Role</label>
+                        <select id="admin-reg-role" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all text-slate-900 dark:text-slate-100">
                             <option value="user">Standard User</option>
                             <option value="admin">Administrator</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn-submit" style="background-color: var(--admin-purple); margin-top: 5px;">Provision Account</button>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl flex justify-center items-center gap-2 shadow-lg shadow-indigo-600/15 transition-all active:scale-[0.98]">
+                        Provision Account
+                    </button>
                 </form>
-                <p id="form-feedback" style="margin-top: 12px; font-weight: bold; font-size: 0.9rem;"></p>
+                <p id="form-feedback" class="mt-4 text-sm font-medium"></p>
             </div>
 
-            <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                <h2>Platform Analytics (Global Capital Flow)</h2>
-                <div class="chart-wrapper">
+            <!-- Platform-Wide Analytics Canvas Card -->
+            <div class="lg:col-span-7 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="text-indigo-500 w-5 h-5"></i> Platform Capital Flow
+                    </h2>
+                    <p class="text-sm text-slate-400 mb-6">Aggregated asset metrics tracking global transactions platform-wide.</p>
+                </div>
+                <div class="relative h-[250px] w-full">
                     <canvas id="platformChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="card" style="margin-bottom: 24px;">
-            <h2>Active Registered Users</h2>
-            <div style="overflow-x: auto; margin-top: 16px;">
-                <table>
+        <!-- Registered User Accounts Grid Panel -->
+        <section class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md mb-8">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+                <i data-lucide="users" class="text-indigo-500 w-5 h-5"></i> Registered Client Portals
+            </h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email Address</th>
-                            <th>Security Level</th>
-                            <th>Actions</th>
+                        <tr class="border-b border-slate-100 dark:border-slate-800">
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">UID</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Name</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Security Level</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="admin-user-rows">
-                        </tbody>
+                    <tbody id="admin-user-rows" class="divide-y divide-slate-100 dark:divide-slate-800/50">
+                        <!-- Loaded dynamically -->
+                    </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div id="user-inspect-section" class="card" style="display: none; border-top: 4px solid var(--admin-purple);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 id="inspect-title" style="margin: 0;">User Account Audit Log</h2>
-                <button onclick="document.getElementById('user-inspect-section').style.display='none'" class="btn-cancel" style="width: auto; margin: 0; padding: 6px 12px;">Close Panel</button>
+        <!-- Hidden Transaction Audit Inspection Tool -->
+        <section id="user-inspect-section" class="hidden bg-white dark:bg-slate-900/40 border-t-4 border-indigo-500 dark:border-indigo-400 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-lg backdrop-blur-md">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="inspect-title" class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="eye" class="text-indigo-500 w-5 h-5"></i> Audit Operations
+                </h2>
+                <button onclick="document.getElementById('user-inspect-section').classList.add('hidden')" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold px-4 py-2 rounded-xl transition-all">
+                    Close Panel
+                </button>
             </div>
-            <div style="overflow-x: auto;">
-                <table>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Category</th>
-                            <th>Type</th>
-                            <th>Amount</th>
+                        <tr class="border-b border-slate-100 dark:border-slate-800">
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Category</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Type</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Amount</th>
                         </tr>
                     </thead>
-                    <tbody id="inspect-transaction-rows">
-                        </tbody>
+                    <tbody id="inspect-transaction-rows" class="divide-y divide-slate-100 dark:divide-slate-800/50">
+                        <!-- Populated dynamically -->
+                    </tbody>
                 </table>
             </div>
-        </div>
-
+        </section>
     </div>
 
+    <!-- UI Core Scripts -->
     <script src="admin.js"></script>
+    <script>
+        // Synchronized Dark mode behavior
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.getItem('color-theme') === 'light' || (!('color-theme' in localStorage) && !window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.remove('dark');
+            lightIcon.classList.add('hidden');
+            darkIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.add('dark');
+            darkIcon.classList.add('hidden');
+            lightIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        });
+    </script>
 </body>
 </html>
