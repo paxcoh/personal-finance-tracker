@@ -1,0 +1,232 @@
+:root {
+    --bg-app: #f8fafc;
+    --bg-card: #ffffff;
+    --primary: #4f46e5;
+    --success: #10b981;
+    --danger: #ef4444;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --border: #e2e8f0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-dark);
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 1000px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+header h1 {
+    font-size: 2.25rem;
+    color: var(--primary);
+}
+
+header p {
+    color: var(--text-gray);
+    margin-top: 4px;
+}
+
+/* Responsive Metric Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+.metric-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.metric-card h3 {
+    font-size: 0.875rem;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.metric-card p {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.metric-card.income p { color: var(--success); }
+.metric-card.expense p { color: var(--danger); }
+
+/* Main Grid Layout */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 32px;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+.panel {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.panel h2 {
+    font-size: 1.25rem;
+    margin-bottom: 20px;
+}
+
+/* Forms */
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.input-group input, .input-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.input-group input:focus, .input-group select:focus {
+    border-color: var(--primary);
+}
+
+.btn-submit {
+    width: 100%;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* History Log Table */
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    color: var(--text-gray);
+    font-weight: 500;
+}
+
+.tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.tag.income { background-color: #ecfdf5; color: var(--success); }
+.tag.expense { background-color: #fef2f2; color: var(--danger); }
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-weight: 600;
+    cursor: pointer;
+}
+/* Update CSS variables inside :root */
+:root {
+    --bg-app: #f8fafc;
+    --bg-card: #ffffff;
+    --primary: #4f46e5;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #eab308; /* Premium golden yellow */
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --border: #e2e8f0;
+}
+
+/* Edit action button in the table */
+.edit-btn {
+    background: none;
+    border: none;
+    color: var(--warning);
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+}
+
+.edit-btn:hover {
+    text-decoration: underline;
+}
+
+/* Edit state styled submit button */
+.btn-submit.editing {
+    background-color: var(--warning);
+    color: #1e293b; /* Darker text for readability over yellow */
+}
+
+/* Cancel editing button styles */
+.btn-cancel {
+    width: 100%;
+    background-color: #f1f5f9;
+    color: var(--text-gray);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+    background-color: #e2e8f0;
+}
