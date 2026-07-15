@@ -15,6 +15,47 @@ document.addEventListener("DOMContentLoaded", () => {
     // Standard Default Date set to Today
     document.getElementById("date").value = new Date().toISOString().split('T')[0];
 
+    // Premium Toast Notification Engine
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border backdrop-blur-md transition-all duration-300 ease-out translate-x-12 opacity-0 pointer-events-auto max-w-sm min-w-[280px]`;
+        
+        if (type === 'success') {
+            toast.className += ' bg-emerald-500/10 dark:bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400';
+        } else if (type === 'info') {
+            toast.className += ' bg-indigo-500/10 dark:bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400';
+        } else {
+            toast.className += ' bg-red-500/10 dark:bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400';
+        }
+
+        const iconName = type === 'success' ? 'check-circle' : type === 'info' ? 'info' : 'alert-circle';
+        
+        toast.innerHTML = `
+            <i data-lucide="${iconName}" class="w-5 h-5 flex-shrink-0"></i>
+            <span class="text-sm font-semibold">${message}</span>
+        `;
+
+        container.appendChild(toast);
+        
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        setTimeout(() => {
+            toast.classList.remove('translate-x-12', 'opacity-0');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.add('translate-x-12', 'opacity-0');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
+    }
+
     async function checkAuthSession() {
         try {
             const response = await fetch('/api/auth/status');
@@ -27,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.getElementById("admin-nav-btn").style.display = "flex";
                 }
                 loadTransactions(); 
+                showToast(`Logged in successfully as ${data.user.name}!`, 'success');
             } else {
                 window.location.href = "/login.html"; 
             }
@@ -39,7 +81,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const response = await fetch('/api/auth/logout', { method: 'POST' });
             if (response.ok) {
-                window.location.href = "/login.html";
+                showToast("Logged out successfully!", "info");
+                setTimeout(() => {
+                    window.location.href = "/login.html";
+                }, 800);
             }
         } catch (error) {
             console.error("Sign out processing error:", error);
@@ -88,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
                     </td>
                     <td class="py-4 text-sm text-right space-x-2">
-                        <button class="edit-btn text-indigo-500 hover:text-indigo-400 font-semibold transition-all" data-id="${t.id}" data-type="${t.type}" data-category="${t.category}" data-amount="${t.amount}" data-date="${t.date}">
+                        <button class="edit-btn text-indigo-500 hover:text-indigo-400 font-semibold transition-all mr-3" data-id="${t.id}" data-type="${t.type}" data-category="${t.category}" data-amount="${t.amount}" data-date="${t.date}">
                             Edit
                         </button>
                         <button class="delete-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${t.id}">
@@ -168,6 +213,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (response.ok) {
             cancelEdit();
             loadTransactions();
+            showToast(editId ? "Transaction updated successfully!" : "Transaction created successfully!", "success");
+        } else {
+            showToast("Failed to process transaction.", "error");
         }
     });
 
@@ -179,6 +227,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (response.ok) {
             loadTransactions();
+            showToast("Transaction deleted successfully.", "info");
+        } else {
+            showToast("Failed to delete transaction.", "error");
         }
     }
 
