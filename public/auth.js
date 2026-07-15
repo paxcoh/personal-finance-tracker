@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Icons initialization
+    // Render Icons
     lucide.createIcons();
 
     const tSignIn = document.getElementById("toggle-signin");
@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lError = document.getElementById("login-error");
     const sError = document.getElementById("signup-error");
 
-    // Toggle Forms Transition
+    // Seamless Tab Toggle Controls
     tSignIn.addEventListener("click", () => {
         tBg.style.transform = "translateX(0%)";
         tSignIn.classList.replace("text-slate-400", "text-white");
@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 50);
     });
 
-    // Password Visibility Toggle
+    // Toggle Input Passwords Visible
     document.querySelectorAll(".toggle-password-visibility").forEach(btn => {
         btn.addEventListener("click", (e) => {
             const input = e.currentTarget.previousElementSibling;
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Password Strength Meter Indicators
+    // Dynamic Password Strength Meter logic
     const signupPass = document.getElementById("signup-password");
     const labelStrength = document.getElementById("strength-label");
     const b1 = document.getElementById("bar-1");
@@ -68,8 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
         if (/[^A-Za-z0-9]/.test(val)) score++;
 
-        // Reset
-        [b1, b2, b3].forEach(b => b.className = "h-full w-1/3 bg-slate-800 transition-colors");
+        [b1, b2, b3].forEach(b => b.className = "h-full w-1/3 bg-slate-900 transition-colors");
 
         if (val.length === 0) {
             labelStrength.textContent = "Empty";
@@ -77,22 +76,22 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (score === 1) {
             labelStrength.textContent = "Weak";
             labelStrength.className = "text-red-400";
-            b1.classList.replace("bg-slate-800", "bg-red-500");
+            b1.classList.replace("bg-slate-900", "bg-red-500");
         } else if (score === 2) {
             labelStrength.textContent = "Medium";
             labelStrength.className = "text-amber-400";
-            b1.classList.replace("bg-slate-800", "bg-amber-500");
-            b2.classList.replace("bg-slate-800", "bg-amber-500");
+            b1.classList.replace("bg-slate-900", "bg-amber-500");
+            b2.classList.replace("bg-slate-900", "bg-amber-500");
         } else if (score >= 3) {
             labelStrength.textContent = "Strong";
             labelStrength.className = "text-emerald-400";
-            b1.classList.replace("bg-slate-800", "bg-emerald-500");
-            b2.classList.replace("bg-slate-800", "bg-emerald-500");
-            b3.classList.replace("bg-slate-800", "bg-emerald-500");
+            b1.classList.replace("bg-slate-900", "bg-emerald-500");
+            b2.classList.replace("bg-slate-900", "bg-emerald-500");
+            b3.classList.replace("bg-slate-900", "bg-emerald-500");
         }
     });
 
-    // Action Form: LOGIN SUBMIT
+    // Login Form Request Handler
     formLogin.addEventListener("submit", async (e) => {
         e.preventDefault();
         lError.classList.add("hidden");
@@ -109,20 +108,25 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await res.json();
             if (res.ok) {
-                window.location.href = "/index.html"; // Route to Dashboard on success
+                // If they are admin, direct them to Admin panel. Else, direct to user ledger.
+                if (data.user.role === 'admin') {
+                    window.location.href = "/admin.html";
+                } else {
+                    window.location.href = "/index.html";
+                }
             } else {
                 lError.querySelector(".msg").textContent = data.error;
                 lError.classList.remove("hidden");
             }
         } catch {
-            lError.querySelector(".msg").textContent = "Network error. Try again.";
+            lError.querySelector(".msg").textContent = "Connection issue. Please verify server status.";
             lError.classList.remove("hidden");
         } finally {
             setLoading(formLogin, false);
         }
     });
 
-    // Action Form: SIGNUP SUBMIT
+    // Sign up Form Request Handler
     formSignup.addEventListener("submit", async (e) => {
         e.preventDefault();
         sError.classList.add("hidden");
@@ -146,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 sError.classList.remove("hidden");
             }
         } catch {
-            sError.querySelector(".msg").textContent = "Connection lost. Try again.";
+            sError.querySelector(".msg").textContent = "Network error. Try again.";
             sError.classList.remove("hidden");
         } finally {
             setLoading(formSignup, false);

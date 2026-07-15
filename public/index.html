@@ -8,66 +8,73 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="dashboard-container">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-     <div>
-        <h1>💰 FinanceFlow</h1>
-        <p>Welcome back, <span id="user-display-name" style="color: var(--primary); font-weight: 600;">User</span>!</p>
-    </div>
-    <button id="btn-logout" style="background: none; border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; font-weight: 600; color: var(--danger); cursor: pointer; transition: background 0.2s;">
-        Sign Out
-    </button>
-    </header>
+    <div class="container">
+        
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1>💰 FinanceFlow</h1>
+                <p>Welcome back, <span id="user-display-name" style="color: var(--primary); font-weight: 600;">User</span>!</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a id="admin-nav-btn" href="/admin.html" class="btn" style="display: none; background-color: #6366f1; color: white; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">
+                    Admin Panel
+                </a>
+                <button id="btn-logout" class="btn-cancel" style="width: auto; margin-top: 0; padding: 10px 18px; color: var(--danger); border-color: var(--danger);">
+                    Sign Out
+                </button>
+            </div>
+        </header>
 
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <h3>Current Balance</h3>
-                <p id="total-balance">$0.00</p>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Total Balance</h3>
+                <p id="total-balance" class="balance">$0.00</p>
             </div>
-            <div class="metric-card income">
+            <div class="card">
                 <h3>Total Income</h3>
-                <p id="total-income">$0.00</p>
+                <p id="total-income" class="balance income">+$0.00</p>
             </div>
-            <div class="metric-card expense">
+            <div class="card">
                 <h3>Total Expenses</h3>
-                <p id="total-expenses">$0.00</p>
+                <p id="total-expenses" class="balance expense">-$0.00</p>
             </div>
         </div>
 
-        <main class="main-content">
-            <section class="panel">
-                <h2>Add Transaction</h2>
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr; margin-top: 32px;">
+            
+            <div class="card">
+                <h2 id="form-title">New Transaction</h2>
                 <form id="transaction-form">
-    <input type="hidden" id="edit-id" value="">
+                    <input type="hidden" id="edit-id" value="">
 
-    <div class="input-group">
-        <label for="type">Type</label>
-        <select id="type" required>
-            <option value="income">Income (+)</option>
-            <option value="expense">Expense (-)</option>
-        </select>
-    </div>
-    <div class="input-group">
-        <label for="category">Category</label>
-        <input type="text" id="category" placeholder="e.g. Salary, Rent, Food" required>
-    </div>
-    <div class="input-group">
-        <label for="amount">Amount ($)</label>
-        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
-    </div>
-    <div class="input-group">
-        <label for="date">Date</label>
-        <input type="date" id="date" required>
-    </div>
-    
-    <button type="submit" id="btn-submit" class="btn-submit">Save Transaction</button>
-    <button type="button" id="btn-cancel" class="btn-cancel" style="display: none;">Cancel Edit</button>
-</form>
-            </section>
+                    <div class="input-group">
+                        <label for="type">Type</label>
+                        <select id="type" required>
+                            <option value="income">Income (+)</option>
+                            <option value="expense">Expense (-)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="category">Category</label>
+                        <input type="text" id="category" placeholder="e.g., Salary, Rent, Food" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="amount">Amount ($)</label>
+                        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    
+                    <button type="submit" id="btn-submit" class="btn-submit">Save Transaction</button>
+                    <button type="button" id="btn-cancel" class="btn-cancel" style="display: none;">Cancel Edit</button>
+                </form>
+            </div>
 
-            <section class="panel">
+            <div class="card">
                 <h2>Transaction History</h2>
-                <div class="table-container">
+                <div style="overflow-x: auto; margin-top: 16px;">
                     <table>
                         <thead>
                             <tr>
@@ -82,9 +89,11 @@
                             </tbody>
                     </table>
                 </div>
-            </section>
-        </main>
+            </div>
+        </div>
+
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>

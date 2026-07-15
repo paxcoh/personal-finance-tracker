@@ -140,6 +140,7 @@
 
 // the code above they wasnt a login/logout and session so the one below there is sessions 
 
+
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("transaction-form");
     const tableBody = document.getElementById("transaction-rows");
@@ -147,36 +148,38 @@ document.addEventListener("DOMContentLoaded", () => {
     const incomeEl = document.getElementById("total-income");
     const expenseEl = document.getElementById("total-expenses");
     
-    // Edit flow elements
+    // Edit state management variables
     const editIdInput = document.getElementById("edit-id");
     const submitBtn = document.getElementById("btn-submit");
     const cancelBtn = document.getElementById("btn-cancel");
 
-    // Set form date input default to today
+    // Standard Default Date set to Today
     document.getElementById("date").value = new Date().toISOString().split('T')[0];
 
-    // --- SESSION SECURITY CHECK ---
+    // Verify Session State & Render Admin Links
     async function checkAuthSession() {
         try {
             const response = await fetch('/api/auth/status');
             const data = await response.json();
             
             if (data.authenticated) {
-                // Update header with the logged-in user's name
                 document.getElementById("user-display-name").textContent = data.user.name;
-                // Load user-specific records
+                
+                // Show admin button if role equals Admin
+                if (data.user.role === 'admin') {
+                    document.getElementById("admin-nav-btn").style.display = "inline-block";
+                }
                 loadTransactions(); 
             } else {
-                // Redirection fallback if not authenticated
                 window.location.href = "/login.html"; 
             }
         } catch (error) {
-            console.error("Session verification failed:", error);
+            console.error("Auth status verification failed:", error);
             window.location.href = "/login.html";
         }
     }
 
-    // --- LOGOUT ROUTINE ---
+    // Sign out Trigger
     document.getElementById("btn-logout").addEventListener("click", async () => {
         try {
             const response = await fetch('/api/auth/logout', { method: 'POST' });
@@ -184,18 +187,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.href = "/login.html";
             }
         } catch (error) {
-            console.error("Logout failed:", error);
+            console.error("Sign out processing error:", error);
         }
     });
 
-    // Fetch transactions from the backend server
+    // Load user-specific transaction list
     async function loadTransactions() {
         const response = await fetch('/api/transactions');
         const transactions = await response.json();
         updateUI(transactions);
     }
 
-    // Refresh dashboard values and rebuild the history list
+    // Compute metrics and update visual lists
     function updateUI(transactions) {
         tableBody.innerHTML = "";
         let totalIncome = 0;
@@ -237,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Enter Edit Mode (Populate form & change colors to Yellow)
+    // Populate input fields in the yellow Edit Mode
     function startEditTransaction(e) {
         const btn = e.target;
         editIdInput.value = btn.getAttribute("data-id");
@@ -247,19 +250,19 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("amount").value = btn.getAttribute("data-amount");
         document.getElementById("date").value = btn.getAttribute("data-date");
 
-        // Swap button styles to yellow edit state
+        document.getElementById("form-title").textContent = "Edit Transaction";
         submitBtn.textContent = "Update Transaction";
         submitBtn.classList.add("editing");
         cancelBtn.style.display = "block";
     }
 
-    // Exit Edit Mode and Reset Form
+    // Exit Edit Mode and Restore Standard Interface
     function cancelEdit() {
         form.reset();
         editIdInput.value = "";
         document.getElementById("date").value = new Date().toISOString().split('T')[0];
         
-        // Restore standard button styling
+        document.getElementById("form-title").textContent = "New Transaction";
         submitBtn.textContent = "Save Transaction";
         submitBtn.classList.remove("editing");
         cancelBtn.style.display = "none";
@@ -267,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     cancelBtn.addEventListener("click", cancelEdit);
 
-    // Save or Update transaction via API
+    // Save or Update transaction submission handler
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const type = document.getElementById("type").value;
@@ -279,7 +282,6 @@ document.addEventListener("DOMContentLoaded", () => {
         let url = '/api/transactions';
         let method = 'POST';
 
-        // Switch payload configurations if editing
         if (editId) {
             url = `/api/transactions/${editId}`;
             method = 'PUT';
@@ -297,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Delete transaction via API
+    // Delete transaction executioner
     async function deleteTransaction(e) {
         const id = e.target.getAttribute("data-id");
         const response = await fetch(`/api/transactions/${id}`, {
@@ -309,6 +311,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Start everything by validating the user's login session first
+    // Verify session immediately upon layout loading
     checkAuthSession();
 });

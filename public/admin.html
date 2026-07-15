@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceFlow | Admin Command Center</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-purple: #6366f1;
+            --admin-indigo: #4f46e5;
+            --admin-dark: #1e1b4b;
+        }
+        .admin-header {
+            background: linear-gradient(135deg, var(--admin-dark), var(--admin-indigo));
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 768px) {
+            .admin-grid { grid-template-columns: 1fr; }
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 240px;
+            width: 100%;
+        }
+        .btn-inspect {
+            background-color: var(--admin-purple);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-right: 5px;
+        }
+        .btn-inspect:hover {
+            background-color: var(--admin-indigo);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <header class="admin-header">
+            <div>
+                <h1 style="color: white; margin-bottom: 4px;">🛡️ Admin Command Center</h1>
+                <p style="color: rgba(255, 255, 255, 0.8); margin: 0;">System Performance and User Operations</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="/index.html" class="btn-cancel" style="background-color: rgba(255,255,255,0.15); color: white; border: none; width: auto; margin: 0; padding: 10px 18px; text-decoration: none; display: inline-block; font-size: 0.9rem; font-weight: 600; border-radius: 8px; text-align: center;">
+                    User Dashboard
+                </a>
+                <button id="btn-admin-logout" class="btn-cancel" style="background-color: #ef4444; color: white; border: none; width: auto; margin: 0; padding: 10px 18px; font-weight: 600; font-size: 0.9rem;">
+                    Sign Out
+                </button>
+            </div>
+        </header>
+
+        <div class="admin-grid">
+            
+            <div class="card">
+                <h2>Create New User Account</h2>
+                <form id="admin-user-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                    <div class="input-group" style="margin: 0;">
+                        <input type="text" id="admin-reg-name" placeholder="Full Name" required>
+                    </div>
+                    <div class="input-group" style="margin: 0;">
+                        <input type="email" id="admin-reg-email" placeholder="Email Address" required>
+                    </div>
+                    <div class="input-group" style="margin: 0;">
+                        <input type="password" id="admin-reg-password" placeholder="Password (Minimum 6 characters)" required>
+                    </div>
+                    <div class="input-group" style="margin: 0;">
+                        <select id="admin-reg-role">
+                            <option value="user">Standard User</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background-color: var(--admin-purple); margin-top: 5px;">Provision Account</button>
+                </form>
+                <p id="form-feedback" style="margin-top: 12px; font-weight: bold; font-size: 0.9rem;"></p>
+            </div>
+
+            <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <h2>Platform Analytics (Global Capital Flow)</h2>
+                <div class="chart-wrapper">
+                    <canvas id="platformChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+            <h2>Active Registered Users</h2>
+            <div style="overflow-x: auto; margin-top: 16px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email Address</th>
+                            <th>Security Level</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-user-rows">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="user-inspect-section" class="card" style="display: none; border-top: 4px solid var(--admin-purple);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 id="inspect-title" style="margin: 0;">User Account Audit Log</h2>
+                <button onclick="document.getElementById('user-inspect-section').style.display='none'" class="btn-cancel" style="width: auto; margin: 0; padding: 6px 12px;">Close Panel</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inspect-transaction-rows">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
