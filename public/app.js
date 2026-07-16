@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", () => {
     // Render Icons immediately
     lucide.createIcons();
@@ -17,25 +16,24 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("date").value = new Date().toISOString().split('T')[0];
 
     // ============================================
-    // ENHANCED TOAST NOTIFICATION SYSTEM
+    // POPUP TOAST NOTIFICATION SYSTEM
     // ============================================
-    function showToast(message, type = 'success', title = '') {
+    function showPopupToast(message, type = 'success', title = '') {
         const container = document.getElementById('toast-container');
         const overlay = document.getElementById('toast-overlay');
         if (!container) return;
 
-        // Show overlay
         if (overlay) {
             overlay.classList.remove('opacity-0', 'pointer-events-none');
             overlay.classList.add('opacity-100', 'pointer-events-auto');
         }
 
-        const toastId = 'toast-' + Date.now();
+        const toastId = 'popup-toast-' + Date.now();
 
         const titles = {
-            success: 'Success!',
-            error: 'Error!',
-            info: 'Information'
+            success: '🎉 Success!',
+            error: '❌ Error!',
+            info: 'ℹ️ Information'
         };
         
         const finalTitle = title || titles[type] || 'Notification';
@@ -43,30 +41,30 @@ document.addEventListener("DOMContentLoaded", () => {
         const configs = {
             success: {
                 icon: '✅',
-                bg: 'bg-emerald-500/10',
-                border: 'border-emerald-500/30',
+                border: 'border-emerald-500/40',
                 text: 'text-emerald-600 dark:text-emerald-400',
                 iconBg: 'bg-emerald-500/20',
                 progress: 'bg-emerald-500',
-                titleColor: 'text-emerald-700 dark:text-emerald-300'
+                titleColor: 'text-emerald-700 dark:text-emerald-300',
+                bg: 'bg-white dark:bg-slate-900/95'
             },
             error: {
                 icon: '❌',
-                bg: 'bg-red-500/10',
-                border: 'border-red-500/30',
+                border: 'border-red-500/40',
                 text: 'text-red-600 dark:text-red-400',
                 iconBg: 'bg-red-500/20',
                 progress: 'bg-red-500',
-                titleColor: 'text-red-700 dark:text-red-300'
+                titleColor: 'text-red-700 dark:text-red-300',
+                bg: 'bg-white dark:bg-slate-900/95'
             },
             info: {
                 icon: 'ℹ️',
-                bg: 'bg-indigo-500/10',
-                border: 'border-indigo-500/30',
+                border: 'border-indigo-500/40',
                 text: 'text-indigo-600 dark:text-indigo-400',
                 iconBg: 'bg-indigo-500/20',
                 progress: 'bg-indigo-500',
-                titleColor: 'text-indigo-700 dark:text-indigo-300'
+                titleColor: 'text-indigo-700 dark:text-indigo-300',
+                bg: 'bg-white dark:bg-slate-900/95'
             }
         };
 
@@ -75,36 +73,32 @@ document.addEventListener("DOMContentLoaded", () => {
         const toast = document.createElement('div');
         toast.id = toastId;
         toast.className = `
-            toast-item pointer-events-auto
-            bg-white dark:bg-slate-900/95
-            backdrop-blur-xl
-            border ${config.border}
-            rounded-2xl
-            shadow-2xl
-            p-5
-            flex items-start gap-4
-            min-w-[320px] max-w-[440px] w-full
-            transform scale-95 translate-y-4 opacity-0
-            transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+            popup-toast pointer-events-auto ${config.bg}
+            backdrop-blur-xl border ${config.border}
+            rounded-2xl shadow-2xl p-6
+            flex items-start gap-5
+            min-w-[340px] max-w-[460px] w-full
+            transform scale-95 translate-y-8 opacity-0
+            transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
             relative overflow-hidden
             mx-4
         `;
 
         toast.innerHTML = `
             <div class="absolute top-0 left-0 right-0 h-1 bg-slate-100 dark:bg-slate-800">
-                <div class="h-full ${config.progress} rounded-full transition-all duration-[3500ms] ease-linear" style="width: 100%"></div>
+                <div class="h-full ${config.progress} rounded-full transition-all duration-[4000ms] ease-linear" style="width: 100%"></div>
             </div>
-            <div class="flex-shrink-0 w-11 h-11 rounded-xl ${config.iconBg} flex items-center justify-center text-2xl">
+            <div class="flex-shrink-0 w-14 h-14 rounded-2xl ${config.iconBg} flex items-center justify-center text-3xl shadow-inner">
                 ${config.icon}
             </div>
-            <div class="flex-1 min-w-0">
-                <h4 class="text-sm font-bold ${config.titleColor} mb-0.5">${finalTitle}</h4>
+            <div class="flex-1 min-w-0 pt-0.5">
+                <h4 class="text-base font-bold ${config.titleColor} mb-1">${finalTitle}</h4>
                 <p class="text-sm ${config.text} opacity-90 leading-relaxed">${message}</p>
             </div>
-            <button onclick="closeToast('${toastId}')" 
-                    class="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all duration-200 flex items-center justify-center">
+            <button onclick="closePopupToast('${toastId}')" 
+                    class="flex-shrink-0 w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all duration-200 flex items-center justify-center -mt-1 -mr-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         `;
@@ -112,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
         container.appendChild(toast);
 
         requestAnimationFrame(() => {
-            toast.classList.remove('scale-95', 'translate-y-4', 'opacity-0');
+            toast.classList.remove('scale-95', 'translate-y-8', 'opacity-0');
             toast.classList.add('scale-100', 'translate-y-0', 'opacity-100');
         });
 
@@ -120,17 +114,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (progressBar) {
             setTimeout(() => {
                 progressBar.style.width = '0%';
-            }, 100);
+            }, 150);
         }
 
         const timeoutId = setTimeout(() => {
-            closeToast(toastId);
-        }, 3500);
+            closePopupToast(toastId);
+        }, 4000);
 
         toast.dataset.timeoutId = timeoutId;
     }
 
-    window.closeToast = function(toastId) {
+    window.closePopupToast = function(toastId) {
         const toast = document.getElementById(toastId);
         if (!toast) return;
 
@@ -139,44 +133,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         toast.classList.remove('scale-100', 'translate-y-0', 'opacity-100');
-        toast.classList.add('scale-95', '-translate-y-4', 'opacity-0');
+        toast.classList.add('scale-95', '-translate-y-8', 'opacity-0');
 
         setTimeout(() => {
             toast.remove();
             const container = document.getElementById('toast-container');
             const overlay = document.getElementById('toast-overlay');
-            if (container && container.children.length === 0) {
-                if (overlay) {
-                    overlay.classList.remove('opacity-100', 'pointer-events-auto');
-                    overlay.classList.add('opacity-0', 'pointer-events-none');
-                }
+            if (container && container.children.length === 0 && overlay) {
+                overlay.classList.remove('opacity-100', 'pointer-events-auto');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
             }
-        }, 400);
-    }
+        }, 500);
+    };
 
-    function closeAllToasts() {
-        const container = document.getElementById('toast-container');
-        if (container) {
-            const toasts = container.querySelectorAll('.toast-item');
-            toasts.forEach(toast => {
-                window.closeToast(toast.id);
-            });
-        }
+    function closeAllPopupToasts() {
+        document.querySelectorAll('.popup-toast').forEach(t => closePopupToast(t.id));
     }
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeAllToasts();
-        }
+        if (e.key === 'Escape') closeAllPopupToasts();
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const overlay = document.getElementById('toast-overlay');
-        if (overlay) {
-            overlay.addEventListener('click', closeAllToasts);
-        }
-    });
+    document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
+    // Check Auth Session - NO notification on page load
     async function checkAuthSession() {
         try {
             const response = await fetch('/api/auth/status');
@@ -188,8 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.user.role === 'admin') {
                     document.getElementById("admin-nav-btn").style.display = "flex";
                 }
-                loadTransactions(); 
-                showToast(`Logged in successfully as ${data.user.name}!`, 'success', 'Welcome Back! 🎉');
+                loadTransactions();
+                // REMOVED: No login notification here
             } else {
                 window.location.href = "/login.html"; 
             }
@@ -198,11 +178,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Logout
     document.getElementById("btn-logout").addEventListener("click", async () => {
         try {
             const response = await fetch('/api/auth/logout', { method: 'POST' });
             if (response.ok) {
-                showToast("Logged out successfully!", "info", "See You Soon 👋");
+                showPopupToast("Logged out successfully!", "info", "👋 See You Soon");
                 setTimeout(() => {
                     window.location.href = "/login.html";
                 }, 800);
@@ -334,9 +315,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (response.ok) {
             cancelEdit();
             loadTransactions();
-            showToast(editId ? "Transaction updated successfully!" : "Transaction created successfully!", "success", editId ? "Updated! ✏️" : "Created! 🎉");
+            showPopupToast(editId ? "Transaction updated successfully!" : "Transaction created successfully!", "success", editId ? "✏️ Updated!" : "🎉 Created!");
         } else {
-            showToast("Failed to process transaction.", "error", "Oops!");
+            showPopupToast("Failed to process transaction.", "error", "❌ Oops!");
         }
     });
 
@@ -348,9 +329,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (response.ok) {
             loadTransactions();
-            showToast("Transaction deleted successfully.", "info", "Deleted 🗑️");
+            showPopupToast("Transaction deleted successfully.", "info", "🗑️ Deleted");
         } else {
-            showToast("Failed to delete transaction.", "error", "Oops!");
+            showPopupToast("Failed to delete transaction.", "error", "❌ Oops!");
         }
     }
 

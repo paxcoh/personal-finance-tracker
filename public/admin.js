@@ -2,9 +2,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let platformChart = null;
 
     // ============================================
-    // ENHANCED TOAST NOTIFICATION SYSTEM
+    // POPUP TOAST NOTIFICATION SYSTEM
     // ============================================
-    function showToast(message, type = 'success', title = '') {
+    function showPopupToast(message, type = 'success', title = '') {
         const container = document.getElementById('toast-container');
         const overlay = document.getElementById('toast-overlay');
         if (!container) return;
@@ -14,63 +14,113 @@ document.addEventListener("DOMContentLoaded", () => {
             overlay.classList.add('opacity-100', 'pointer-events-auto');
         }
 
-        const toastId = 'toast-' + Date.now();
-        const titles = { success: 'Success!', error: 'Error!', info: 'Information' };
+        const toastId = 'popup-toast-' + Date.now();
+
+        const titles = {
+            success: '🎉 Success!',
+            error: '❌ Error!',
+            info: 'ℹ️ Information'
+        };
+        
         const finalTitle = title || titles[type] || 'Notification';
         
         const configs = {
-            success: { icon: '✅', border: 'border-emerald-500/30', text: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/20', progress: 'bg-emerald-500', titleColor: 'text-emerald-700 dark:text-emerald-300' },
-            error: { icon: '❌', border: 'border-red-500/30', text: 'text-red-600 dark:text-red-400', iconBg: 'bg-red-500/20', progress: 'bg-red-500', titleColor: 'text-red-700 dark:text-red-300' },
-            info: { icon: 'ℹ️', border: 'border-indigo-500/30', text: 'text-indigo-600 dark:text-indigo-400', iconBg: 'bg-indigo-500/20', progress: 'bg-indigo-500', titleColor: 'text-indigo-700 dark:text-indigo-300' }
+            success: {
+                icon: '✅',
+                border: 'border-emerald-500/40',
+                text: 'text-emerald-600 dark:text-emerald-400',
+                iconBg: 'bg-emerald-500/20',
+                progress: 'bg-emerald-500',
+                titleColor: 'text-emerald-700 dark:text-emerald-300',
+                bg: 'bg-white dark:bg-slate-900/95'
+            },
+            error: {
+                icon: '❌',
+                border: 'border-red-500/40',
+                text: 'text-red-600 dark:text-red-400',
+                iconBg: 'bg-red-500/20',
+                progress: 'bg-red-500',
+                titleColor: 'text-red-700 dark:text-red-300',
+                bg: 'bg-white dark:bg-slate-900/95'
+            },
+            info: {
+                icon: 'ℹ️',
+                border: 'border-indigo-500/40',
+                text: 'text-indigo-600 dark:text-indigo-400',
+                iconBg: 'bg-indigo-500/20',
+                progress: 'bg-indigo-500',
+                titleColor: 'text-indigo-700 dark:text-indigo-300',
+                bg: 'bg-white dark:bg-slate-900/95'
+            }
         };
+
         const config = configs[type] || configs.info;
 
         const toast = document.createElement('div');
         toast.id = toastId;
         toast.className = `
-            toast-item pointer-events-auto bg-white dark:bg-slate-900/95 backdrop-blur-xl
-            border ${config.border} rounded-2xl shadow-2xl p-5 flex items-start gap-4
-            min-w-[320px] max-w-[440px] w-full transform scale-95 translate-y-4 opacity-0
-            transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-            relative overflow-hidden mx-4
+            popup-toast pointer-events-auto ${config.bg}
+            backdrop-blur-xl border ${config.border}
+            rounded-2xl shadow-2xl p-6
+            flex items-start gap-5
+            min-w-[340px] max-w-[460px] w-full
+            transform scale-95 translate-y-8 opacity-0
+            transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+            relative overflow-hidden
+            mx-4
         `;
+
         toast.innerHTML = `
             <div class="absolute top-0 left-0 right-0 h-1 bg-slate-100 dark:bg-slate-800">
-                <div class="h-full ${config.progress} rounded-full transition-all duration-[3500ms] ease-linear" style="width: 100%"></div>
+                <div class="h-full ${config.progress} rounded-full transition-all duration-[4000ms] ease-linear" style="width: 100%"></div>
             </div>
-            <div class="flex-shrink-0 w-11 h-11 rounded-xl ${config.iconBg} flex items-center justify-center text-2xl">${config.icon}</div>
-            <div class="flex-1 min-w-0">
-                <h4 class="text-sm font-bold ${config.titleColor} mb-0.5">${finalTitle}</h4>
+            <div class="flex-shrink-0 w-14 h-14 rounded-2xl ${config.iconBg} flex items-center justify-center text-3xl shadow-inner">
+                ${config.icon}
+            </div>
+            <div class="flex-1 min-w-0 pt-0.5">
+                <h4 class="text-base font-bold ${config.titleColor} mb-1">${finalTitle}</h4>
                 <p class="text-sm ${config.text} opacity-90 leading-relaxed">${message}</p>
             </div>
-            <button onclick="closeToast('${toastId}')" class="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all duration-200 flex items-center justify-center">
+            <button onclick="closePopupToast('${toastId}')" 
+                    class="flex-shrink-0 w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-all duration-200 flex items-center justify-center -mt-1 -mr-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         `;
+
         container.appendChild(toast);
 
         requestAnimationFrame(() => {
-            toast.classList.remove('scale-95', 'translate-y-4', 'opacity-0');
+            toast.classList.remove('scale-95', 'translate-y-8', 'opacity-0');
             toast.classList.add('scale-100', 'translate-y-0', 'opacity-100');
         });
 
         const progressBar = toast.querySelector('.h-full');
         if (progressBar) {
-            setTimeout(() => { progressBar.style.width = '0%'; }, 100);
+            setTimeout(() => {
+                progressBar.style.width = '0%';
+            }, 150);
         }
 
-        const timeoutId = setTimeout(() => { closeToast(toastId); }, 3500);
+        const timeoutId = setTimeout(() => {
+            closePopupToast(toastId);
+        }, 4000);
+
         toast.dataset.timeoutId = timeoutId;
     }
 
-    window.closeToast = function(toastId) {
+    window.closePopupToast = function(toastId) {
         const toast = document.getElementById(toastId);
         if (!toast) return;
-        if (toast.dataset.timeoutId) clearTimeout(parseInt(toast.dataset.timeoutId));
+
+        if (toast.dataset.timeoutId) {
+            clearTimeout(parseInt(toast.dataset.timeoutId));
+        }
+
         toast.classList.remove('scale-100', 'translate-y-0', 'opacity-100');
-        toast.classList.add('scale-95', '-translate-y-4', 'opacity-0');
+        toast.classList.add('scale-95', '-translate-y-8', 'opacity-0');
+
         setTimeout(() => {
             toast.remove();
             const container = document.getElementById('toast-container');
@@ -79,15 +129,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 overlay.classList.remove('opacity-100', 'pointer-events-auto');
                 overlay.classList.add('opacity-0', 'pointer-events-none');
             }
-        }, 400);
+        }, 500);
     };
 
-    function closeAllToasts() {
-        document.querySelectorAll('.toast-item').forEach(t => closeToast(t.id));
+    function closeAllPopupToasts() {
+        document.querySelectorAll('.popup-toast').forEach(t => closePopupToast(t.id));
     }
 
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllToasts(); });
-    document.getElementById('toast-overlay')?.addEventListener('click', closeAllToasts);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllPopupToasts();
+    });
+
+    document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
     // Render Icons
     if (typeof lucide !== 'undefined') {
@@ -102,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (data.authenticated && data.user.role === 'admin') {
                 loadAdminDashboard();
-                showToast('Welcome to Admin Panel!', 'success', 'Admin Access Granted 🔐');
+                // REMOVED: No welcome notification here
             } else {
                 window.location.href = "/index.html";
             }
@@ -122,8 +175,12 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await fetch('/api/admin/stats');
             const stats = await res.json();
-            // You can add stats cards to the admin panel if needed
-            console.log('Admin Stats:', stats);
+            if (res.ok) {
+                document.getElementById('stat-users').textContent = stats.totalUsers || 0;
+                document.getElementById('stat-transactions').textContent = stats.totalTransactions || 0;
+                document.getElementById('stat-income').textContent = `$${(stats.totalIncome || 0).toFixed(2)}`;
+                document.getElementById('stat-expenses').textContent = `$${(stats.totalExpense || 0).toFixed(2)}`;
+            }
         } catch (err) {
             console.error('Failed to load admin stats:', err);
         }
@@ -153,7 +210,6 @@ document.addEventListener("DOMContentLoaded", () => {
             users.forEach(u => {
                 const row = document.createElement("tr");
                 row.className = "hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-all";
-                const totalAmount = (u.total_income || 0) - (u.total_expense || 0);
                 row.innerHTML = `
                     <td class="py-3 text-sm font-medium text-slate-600 dark:text-slate-300">#${u.id}</td>
                     <td class="py-3 text-sm font-semibold text-slate-800 dark:text-slate-100">${u.name || 'N/A'}</td>
@@ -180,7 +236,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 tbody.appendChild(row);
             });
 
-            // Register Action triggers
             document.querySelectorAll(".inspect-btn").forEach(btn => {
                 btn.addEventListener("click", inspectUserTransactions);
             });
@@ -189,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         } catch (err) {
             console.error('Failed to load users:', err);
-            showToast('Failed to load users list', 'error');
+            showPopupToast('Failed to load users list', 'error');
         }
     }
 
@@ -207,11 +262,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 platformChart.destroy();
             }
 
-            // Check if we have data
             const hasData = data.monthlyData && data.monthlyData.length > 0;
             
             if (!hasData) {
-                // Show empty state
                 platformChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
@@ -225,17 +278,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        }
+                        plugins: { legend: { display: false } }
                     }
                 });
                 return;
             }
 
-            // Calculate totals from monthly data
             let totalIncome = 0;
             let totalExpense = 0;
             data.monthlyData.forEach(month => {
@@ -271,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         } catch (err) {
             console.error("Failed to load analytics chart:", err);
-            showToast("Failed to load analytics chart.", 'error', 'Chart Error');
+            showPopupToast("Failed to load analytics chart.", 'error', 'Chart Error');
         }
     }
 
@@ -323,10 +371,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             document.getElementById("user-inspect-section").style.display = "block";
             document.getElementById("user-inspect-section").scrollIntoView({ behavior: 'smooth' });
-            showToast(`Viewing transactions for ${userName}`, 'info', 'Audit Mode 🔍');
+            showPopupToast(`Viewing transactions for ${userName}`, 'info', 'Audit Mode 🔍');
         } catch (err) {
             console.error('Failed to load user transactions:', err);
-            showToast("Failed to load user transactions.", 'error', 'Audit Error');
+            showPopupToast("Failed to load user transactions.", 'error', 'Audit Error');
         }
     }
 
@@ -340,12 +388,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const feedback = document.getElementById("form-feedback");
 
         if (!name || !email || !password) {
-            showToast('All fields are required', 'error');
+            showPopupToast('All fields are required', 'error');
             return;
         }
 
         if (password.length < 6) {
-            showToast('Password must be at least 6 characters', 'error');
+            showPopupToast('Password must be at least 6 characters', 'error');
             return;
         }
 
@@ -364,21 +412,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 document.getElementById("admin-user-form").reset();
                 loadUsersList();
-                showToast(`User ${name} created successfully!`, 'success', 'Account Created 🎉');
+                showPopupToast(`User ${name} created successfully!`, 'success', 'Account Created 🎉');
             } else {
                 if (feedback) {
                     feedback.style.color = "#ef4444";
                     feedback.textContent = data.error || "Failed to provision account.";
                 }
-                showToast(data.error || "Failed to provision account.", 'error', 'Creation Failed');
+                showPopupToast(data.error || "Failed to provision account.", 'error', 'Creation Failed');
             }
         } catch (err) {
             console.error('Failed to create user:', err);
-            showToast("Network error. Please try again.", 'error', 'Network Error');
+            showPopupToast("Network error. Please try again.", 'error', 'Network Error');
         }
     });
 
-    // Delete User and user transactions completely
+    // Delete User
     async function purgeUserAccount(e) {
         const id = e.target.getAttribute("data-id");
         if (!confirm("⚠️ Are you sure you want to delete this user and all associated financial records permanently?")) return;
@@ -388,13 +436,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (res.ok) {
                 loadUsersList();
                 document.getElementById("user-inspect-section").style.display = "none";
-                showToast("User account and all records wiped successfully.", 'info', 'Account Deleted 🗑️');
+                showPopupToast("User account and all records wiped successfully.", 'info', 'Account Deleted 🗑️');
             } else {
-                showToast("Failed to delete user account.", 'error', 'Deletion Failed');
+                showPopupToast("Failed to delete user account.", 'error', 'Deletion Failed');
             }
         } catch (err) {
             console.error('Failed to delete user:', err);
-            showToast("Failed to delete user account.", 'error', 'Deletion Failed');
+            showPopupToast("Failed to delete user account.", 'error', 'Deletion Failed');
         }
     }
 
@@ -402,21 +450,15 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btn-admin-logout")?.addEventListener("click", async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
-            showToast("Logged out successfully!", 'info', 'See You Soon 👋');
+            showPopupToast("Logged out successfully!", 'info', '👋 See You Soon');
             setTimeout(() => {
                 window.location.href = "/login.html";
             }, 500);
         } catch (err) {
             console.error('Logout failed:', err);
-            showToast("Logout failed. Please try again.", 'error', 'Logout Error');
+            showPopupToast("Logout failed. Please try again.", 'error', 'Logout Error');
         }
     });
 
-    // Check admin auth on load
     checkAdminAuth();
-
-    // Re-render icons after any DOM updates
-    if (typeof lucide !== 'undefined') {
-        setTimeout(() => lucide.createIcons(), 100);
-    }
 });
