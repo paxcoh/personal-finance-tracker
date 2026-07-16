@@ -15,6 +15,18 @@
     </script>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        #toast-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+        }
+        .toast-item {
+            animation: none;
+            width: 100%;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
@@ -161,6 +173,14 @@
         </section>
     </div>
 
+    <!-- Toast Overlay -->
+    <div id="toast-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9998] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+        <!-- Toasts will be inserted here -->
+    </div>
+
     <!-- UI Core Scripts -->
     <script src="admin.js"></script>
     <script>
@@ -191,8 +211,6 @@
                 localStorage.setItem('color-theme', 'dark');
             }
         });
-        <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
-
     </script>
 </body>
 </html>
