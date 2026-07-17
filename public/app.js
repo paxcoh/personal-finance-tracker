@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Render Icons immediately
     lucide.createIcons();
 
     const form = document.getElementById("transaction-form");
@@ -12,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const submitBtn = document.getElementById("btn-submit");
     const cancelBtn = document.getElementById("btn-cancel");
 
-    // Standard Default Date set to Today
     document.getElementById("date").value = new Date().toISOString().split('T')[0];
 
     // ============================================
@@ -156,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    // Check Auth Session - NO notification on page load
+    // Check Auth Session
     async function checkAuthSession() {
         try {
             const response = await fetch('/api/auth/status');
@@ -164,12 +162,12 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (data.authenticated) {
                 document.getElementById("user-display-name").textContent = data.user.name;
+                document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
                 
                 if (data.user.role === 'admin') {
                     document.getElementById("admin-nav-btn").style.display = "flex";
                 }
                 loadTransactions();
-                // REMOVED: No login notification here
             } else {
                 window.location.href = "/login.html"; 
             }
@@ -178,7 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Logout
     document.getElementById("btn-logout").addEventListener("click", async () => {
         try {
             const response = await fetch('/api/auth/logout', { method: 'POST' });

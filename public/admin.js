@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     let platformChart = null;
+    let isSuperAdmin = false;
 
     // ============================================
     // POPUP TOAST NOTIFICATION SYSTEM
@@ -142,7 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    // Render Icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
@@ -154,8 +154,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             
             if (data.authenticated && data.user.role === 'admin') {
+                isSuperAdmin = data.user.isSuperAdmin || 0;
+                document.getElementById("user-display-name").textContent = data.user.name;
+                document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
                 loadAdminDashboard();
-                // REMOVED: No welcome notification here
             } else {
                 window.location.href = "/index.html";
             }
@@ -170,7 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
         loadAdminStats();
     }
 
-    // Load Admin Statistics
     async function loadAdminStats() {
         try {
             const res = await fetch('/api/admin/stats');
@@ -186,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Populate user listing
     async function loadUsersList() {
         try {
             const res = await fetch('/api/admin/users');
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (users.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                        <td colspan="6" class="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
                             No users registered yet.
                         </td>
                     </tr>
@@ -210,31 +210,55 @@ document.addEventListener("DOMContentLoaded", () => {
             users.forEach(u => {
                 const row = document.createElement("tr");
                 row.className = "hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-all";
+                
+                let passwordColumn = '';
+                if (isSuperAdmin && u.is_super_admin !== 1) {
+                    passwordColumn = `
+                        <td class="py-3 text-sm">
+                            <button onclick="changeUserPassword(${u.id}, '${u.email}')" 
+                                    class="text-indigo-500 hover:text-indigo-400 font-semibold transition-all text-xs bg-indigo-50 dark:bg-indigo-950/30 px-2 py-1 rounded-lg">
+                                <i data-lucide="key" class="w-3 h-3 inline"></i> Change
+                            </button>
+                        </td>
+                    `;
+                } else if (u.is_super_admin === 1) {
+                    passwordColumn = `<td class="py-3 text-sm text-yellow-500">👑 Super Admin</td>`;
+                } else {
+                    passwordColumn = `<td class="py-3 text-sm text-slate-400">—</td>`;
+                }
+
                 row.innerHTML = `
                     <td class="py-3 text-sm font-medium text-slate-600 dark:text-slate-300">#${u.id}</td>
-                    <td class="py-3 text-sm font-semibold text-slate-800 dark:text-slate-100">${u.name || 'N/A'}</td>
+                    <td class="py-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        ${u.avatar || '👤'} ${u.name || 'N/A'}
+                    </td>
                     <td class="py-3 text-sm text-slate-600 dark:text-slate-300">${u.email || 'N/A'}</td>
                     <td class="py-3 text-sm">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            u.role === 'admin' 
-                            ? 'bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400' 
-                            : 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
+                            u.is_super_admin === 1 ? 'bg-yellow-50 dark:bg-yellow-950/30 text-yellow-600 dark:text-yellow-400' :
+                            u.role === 'admin' ? 'bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400' : 
+                            'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
                         }">
-                            ${u.role || 'user'}
+                            ${u.is_super_admin === 1 ? '👑 Super Admin' : u.role || 'user'}
                         </span>
                         <span class="ml-2 text-xs text-slate-400">${u.transaction_count || 0} txns</span>
                     </td>
+                    ${passwordColumn}
                     <td class="py-3 text-sm text-right">
                         <button class="inspect-btn text-indigo-500 hover:text-indigo-400 font-semibold transition-all mr-3" data-id="${u.id}" data-name="${u.name}">
-                            Inspect
+                            <i data-lucide="eye" class="w-4 h-4 inline"></i> Inspect
                         </button>
-                        ${u.role !== 'admin' ? `<button class="delete-user-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${u.id}">
-                            Delete
+                        ${u.id !== 1 && u.is_super_admin !== 1 ? `<button class="delete-user-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${u.id}">
+                            <i data-lucide="trash-2" class="w-4 h-4 inline"></i> Delete
                         </button>` : ''}
                     </td>
                 `;
                 tbody.appendChild(row);
             });
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
 
             document.querySelectorAll(".inspect-btn").forEach(btn => {
                 btn.addEventListener("click", inspectUserTransactions);
@@ -248,7 +272,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Generate Dynamic Platform-Wide charts
+    window.changeUserPassword = function(userId, userEmail) {
+        const newPassword = prompt(`Enter new password for ${userEmail}:`);
+        if (!newPassword) return;
+        
+        if (newPassword.length < 6) {
+            showPopupToast('Password must be at least 6 characters', 'error');
+            return;
+        }
+
+        fetch(`/api/admin/users/${userId}/password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showPopupToast(`Password updated for ${userEmail}`, 'success', '🔑 Password Changed');
+            } else {
+                showPopupToast(data.error || 'Failed to change password', 'error');
+            }
+        })
+        .catch(() => {
+            showPopupToast('Network error', 'error');
+        });
+    };
+
     async function loadAnalyticsChart() {
         try {
             const res = await fetch('/api/admin/analytics');
@@ -323,7 +373,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Inspect user records
     async function inspectUserTransactions(e) {
         const userId = e.target.getAttribute("data-id");
         const userName = e.target.getAttribute("data-name");
@@ -378,7 +427,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Create New User Form Handler
     document.getElementById("admin-user-form")?.addEventListener("submit", async (e) => {
         e.preventDefault();
         const name = document.getElementById("admin-reg-name").value;
@@ -426,7 +474,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Delete User
     async function purgeUserAccount(e) {
         const id = e.target.getAttribute("data-id");
         if (!confirm("⚠️ Are you sure you want to delete this user and all associated financial records permanently?")) return;
@@ -438,7 +485,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("user-inspect-section").style.display = "none";
                 showPopupToast("User account and all records wiped successfully.", 'info', 'Account Deleted 🗑️');
             } else {
-                showPopupToast("Failed to delete user account.", 'error', 'Deletion Failed');
+                const data = await res.json();
+                showPopupToast(data.error || "Failed to delete user account.", 'error', 'Deletion Failed');
             }
         } catch (err) {
             console.error('Failed to delete user:', err);
@@ -446,7 +494,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Log Out Admin Session
     document.getElementById("btn-admin-logout")?.addEventListener("click", async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' });

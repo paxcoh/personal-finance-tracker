@@ -36,15 +36,85 @@ function requireAdmin(req, res, next) {
     return res.status(403).json({ error: "Access denied. Administrators only." });
 }
 
+function requireSuperAdmin(req, res, next) {
+    if (req.session && req.session.userId && req.session.isSuperAdmin === 1) {
+        return next();
+    }
+    return res.status(403).json({ error: "Access denied. Super Admin only." });
+}
+
 let db;
 
-// Initialize Database
+// ============================================
+// DATABASE MIGRATION SYSTEM
+// ============================================
+
+async function ensureColumnExists(tableName, columnName, columnType, defaultValue = null) {
+    try {
+        // Check if column exists
+        const tableInfo = await db.all(`PRAGMA table_info(${tableName})`);
+        const columnExists = tableInfo.some(col => col.name === columnName);
+        
+        if (!columnExists) {
+            console.log(`📝 Adding column '${columnName}' to table '${tableName}'...`);
+            
+            // For SQLite, we need to add the column with a default value if provided
+            let sql = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`;
+            if (defaultValue !== null) {
+                sql += ` DEFAULT ${typeof defaultValue === 'string' ? `'${defaultValue}'` : defaultValue}`;
+            }
+            await db.exec(sql);
+            console.log(`✅ Column '${columnName}' added successfully.`);
+            return true;
+        }
+        return false;
+    } catch (err) {
+        console.error(`❌ Error adding column '${columnName}':`, err.message);
+        return false;
+    }
+}
+
+async function runMigrations() {
+    console.log('🔄 Running database migrations...');
+    
+    try {
+        // ===== USERS TABLE MIGRATIONS =====
+        await ensureColumnExists('users', 'avatar', 'TEXT', '👤');
+        await ensureColumnExists('users', 'currency', 'TEXT', 'USD');
+        await ensureColumnExists('users', 'theme', 'TEXT', 'dark');
+        await ensureColumnExists('users', 'language', 'TEXT', 'en');
+        await ensureColumnExists('users', 'notifications', 'INTEGER', 1);
+        await ensureColumnExists('users', 'budget_limit', 'REAL', 0);
+        await ensureColumnExists('users', 'is_super_admin', 'INTEGER', 0);
+        
+        // ===== TRANSACTIONS TABLE MIGRATIONS =====
+        await ensureColumnExists('transactions', 'description', 'TEXT', null);
+        await ensureColumnExists('transactions', 'is_recurring', 'INTEGER', 0);
+        await ensureColumnExists('transactions', 'recurring_frequency', 'TEXT', null);
+        
+        // ===== SAVINGS GOALS TABLE MIGRATIONS =====
+        await ensureColumnExists('savings_goals', 'current_amount', 'REAL', 0);
+        await ensureColumnExists('savings_goals', 'status', 'TEXT', 'active');
+        
+        console.log('✅ All migrations completed successfully!');
+    } catch (err) {
+        console.error('❌ Migration failed:', err.message);
+        throw err;
+    }
+}
+
+// ============================================
+// DATABASE INITIALIZATION
+// ============================================
+
 async function initializeDatabaseAndServer() {
     try {
         db = await open({
             filename: './database.db',
             driver: sqlite3.Database
         });
+
+        console.log('📦 Creating tables...');
 
         // ===== USERS TABLE =====
         await db.exec(`
@@ -54,12 +124,6 @@ async function initializeDatabaseAndServer() {
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 role TEXT DEFAULT 'user',
-                avatar TEXT DEFAULT '👤',
-                currency TEXT DEFAULT 'USD',
-                theme TEXT DEFAULT 'dark',
-                language TEXT DEFAULT 'en',
-                notifications INTEGER DEFAULT 1,
-                budget_limit REAL DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -74,9 +138,6 @@ async function initializeDatabaseAndServer() {
                 category TEXT NOT NULL,
                 amount REAL NOT NULL,
                 date TEXT NOT NULL,
-                description TEXT,
-                is_recurring INTEGER DEFAULT 0,
-                recurring_frequency TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -116,9 +177,7 @@ async function initializeDatabaseAndServer() {
                 user_id INTEGER,
                 name TEXT NOT NULL,
                 target_amount REAL NOT NULL,
-                current_amount REAL DEFAULT 0,
                 deadline DATE,
-                status TEXT DEFAULT 'active',
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
@@ -136,25 +195,22 @@ async function initializeDatabaseAndServer() {
             )
         `);
 
+        console.log('✅ Tables created successfully.');
+
+        // ===== RUN MIGRATIONS =====
+        await runMigrations();
+
         // ===== INSERT DEFAULT CATEGORIES =====
         await seedDefaultCategories();
 
-        // ===== SEED ADMIN ACCOUNT =====
-        const adminExists = await db.get("SELECT * FROM users WHERE email = 'admin@flow.com'");
-        if (!adminExists) {
-            const defaultHashedPassword = await bcrypt.hash('admin123', 12);
-            await db.run(
-                "INSERT INTO users (name, email, password, role, avatar) VALUES ('System Admin', 'admin@flow.com', ?, 'admin', '👤')",
-                [defaultHashedPassword]
-            );
-            console.log("🔒 Seeded default Admin account: admin@flow.com / admin123");
-        }
+        // ===== SEED SUPER ADMIN ACCOUNT =====
+        await seedSuperAdmin();
 
         app.listen(PORT, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
         });
     } catch (err) {
-        console.error("Database initialization failed:", err.message);
+        console.error("❌ Database initialization failed:", err.message);
         process.exit(1);
     }
 }
@@ -162,12 +218,10 @@ async function initializeDatabaseAndServer() {
 // ===== SEED DEFAULT CATEGORIES =====
 async function seedDefaultCategories() {
     const defaultCategories = [
-        // Income categories
         { name: 'Salary', type: 'income', color: '#10b981', icon: '💰' },
         { name: 'Freelance', type: 'income', color: '#06b6d4', icon: '💼' },
         { name: 'Investment', type: 'income', color: '#8b5cf6', icon: '📈' },
         { name: 'Gifts', type: 'income', color: '#ec4899', icon: '🎁' },
-        // Expense categories
         { name: 'Housing', type: 'expense', color: '#ef4444', icon: '🏠' },
         { name: 'Transportation', type: 'expense', color: '#f59e0b', icon: '🚗' },
         { name: 'Food', type: 'expense', color: '#f97316', icon: '🍕' },
@@ -190,6 +244,25 @@ async function seedDefaultCategories() {
             );
         }
     }
+}
+
+// ===== SEED SUPER ADMIN =====
+async function seedSuperAdmin() {
+    const adminExists = await db.get("SELECT * FROM users WHERE email = 'admin@flow.com'");
+    if (!adminExists) {
+        const defaultHashedPassword = await bcrypt.hash('admin123', 12);
+        await db.run(
+            `INSERT INTO users (name, email, password, role) 
+             VALUES ('Super Admin', 'admin@flow.com', ?, 'admin')`,
+            [defaultHashedPassword]
+        );
+        console.log("🔒 Seeded Super Admin account: admin@flow.com / admin123");
+    }
+    
+    // Ensure admin is super admin after migrations
+    await db.run(
+        "UPDATE users SET is_super_admin = 1 WHERE email = 'admin@flow.com'"
+    );
 }
 
 // ===== AUDIT LOGGING FUNCTION =====
@@ -224,10 +297,13 @@ app.post('/api/auth/signup', async (req, res) => {
         req.session.userId = result.lastID;
         req.session.userName = name;
         req.session.userRole = 'user';
+        req.session.userEmail = email.toLowerCase().trim();
+        req.session.userAvatar = '👤';
+        req.session.isSuperAdmin = 0;
         
         await logAudit(result.lastID, 'signup', 'User registered successfully');
         
-        res.status(201).json({ success: true, user: { id: result.lastID, name, email, role: 'user' } });
+        res.status(201).json({ success: true, user: { id: result.lastID, name, email, role: 'user', avatar: '👤' } });
     } catch (err) {
         if (err.message.includes("UNIQUE constraint failed: users.email")) {
             return res.status(400).json({ error: "An account with this email already exists." });
@@ -256,10 +332,19 @@ app.post('/api/auth/login', async (req, res) => {
         req.session.userId = user.id;
         req.session.userName = user.name;
         req.session.userRole = user.role;
+        req.session.userEmail = user.email;
+        req.session.userAvatar = user.avatar || '👤';
+        req.session.isSuperAdmin = user.is_super_admin || 0;
 
         await logAudit(user.id, 'login', 'User logged in');
 
-        res.json({ success: true, user: { name: user.name, email: user.email, role: user.role } });
+        res.json({ success: true, user: { 
+            name: user.name, 
+            email: user.email, 
+            role: user.role,
+            avatar: user.avatar || '👤',
+            isSuperAdmin: user.is_super_admin || 0
+        } });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -280,7 +365,16 @@ app.post('/api/auth/logout', (req, res) => {
 
 app.get('/api/auth/status', (req, res) => {
     if (req.session.userId) {
-        res.json({ authenticated: true, user: { name: req.session.userName, role: req.session.userRole } });
+        res.json({ 
+            authenticated: true, 
+            user: { 
+                name: req.session.userName, 
+                role: req.session.userRole,
+                avatar: req.session.userAvatar || '👤',
+                email: req.session.userEmail,
+                isSuperAdmin: req.session.isSuperAdmin || 0
+            } 
+        });
     } else {
         res.json({ authenticated: false });
     }
@@ -291,9 +385,13 @@ app.get('/api/auth/status', (req, res) => {
 app.get('/api/user/profile', requireAuth, async (req, res) => {
     try {
         const user = await db.get(
-            'SELECT id, name, email, role, avatar, currency, theme, language, notifications, budget_limit, created_at FROM users WHERE id = ?',
+            'SELECT id, name, email, role, avatar, currency, theme, language, notifications, budget_limit, is_super_admin, created_at FROM users WHERE id = ?',
             [req.session.userId]
         );
+        if (user) {
+            req.session.userAvatar = user.avatar || '👤';
+            req.session.userName = user.name;
+        }
         res.json(user);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -303,20 +401,38 @@ app.get('/api/user/profile', requireAuth, async (req, res) => {
 app.put('/api/user/profile', requireAuth, async (req, res) => {
     const { name, email, avatar, currency, theme, language, notifications, budget_limit } = req.body;
     try {
-        await db.run(
-            `UPDATE users SET 
-                name = COALESCE(?, name),
-                email = COALESCE(?, email),
-                avatar = COALESCE(?, avatar),
-                currency = COALESCE(?, currency),
-                theme = COALESCE(?, theme),
-                language = COALESCE(?, language),
-                notifications = COALESCE(?, notifications),
-                budget_limit = COALESCE(?, budget_limit),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?`,
-            [name, email, avatar, currency, theme, language, notifications, budget_limit, req.session.userId]
-        );
+        if (email) {
+            const existingUser = await db.get('SELECT id FROM users WHERE email = ? AND id != ?', [email.toLowerCase().trim(), req.session.userId]);
+            if (existingUser) {
+                return res.status(400).json({ error: "Email already in use by another account" });
+            }
+        }
+
+        // Build dynamic update query
+        const updates = [];
+        const params = [];
+        
+        if (name !== undefined) { updates.push('name = ?'); params.push(name); }
+        if (email !== undefined) { updates.push('email = ?'); params.push(email.toLowerCase().trim()); }
+        if (avatar !== undefined) { updates.push('avatar = ?'); params.push(avatar); }
+        if (currency !== undefined) { updates.push('currency = ?'); params.push(currency); }
+        if (theme !== undefined) { updates.push('theme = ?'); params.push(theme); }
+        if (language !== undefined) { updates.push('language = ?'); params.push(language); }
+        if (notifications !== undefined) { updates.push('notifications = ?'); params.push(notifications); }
+        if (budget_limit !== undefined) { updates.push('budget_limit = ?'); params.push(budget_limit); }
+        
+        updates.push('updated_at = CURRENT_TIMESTAMP');
+        params.push(req.session.userId);
+
+        if (updates.length > 0) {
+            const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+            await db.run(query, params);
+        }
+        
+        if (name) req.session.userName = name;
+        if (email) req.session.userEmail = email;
+        if (avatar) req.session.userAvatar = avatar;
+        
         await logAudit(req.session.userId, 'profile_update', 'Updated profile settings');
         res.json({ success: true });
     } catch (err) {
@@ -366,6 +482,190 @@ app.delete('/api/user/delete-account', requireAuth, async (req, res) => {
         req.session.destroy();
         res.json({ success: true });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ========== ADMIN ENDPOINTS ==========
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+        const users = await db.all(`
+            SELECT 
+                u.id, 
+                u.name, 
+                u.email, 
+                u.role, 
+                u.avatar, 
+                u.currency, 
+                u.is_super_admin,
+                u.created_at, 
+                u.updated_at,
+                COALESCE(COUNT(t.id), 0) as transaction_count,
+                COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as total_expense
+            FROM users u
+            LEFT JOIN transactions t ON u.id = t.user_id
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+        `);
+        res.json(users);
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+    try {
+        const stats = await db.get(`
+            SELECT 
+                (SELECT COUNT(*) FROM users) as totalUsers,
+                (SELECT COUNT(*) FROM transactions) as totalTransactions,
+                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense,
+                (SELECT COUNT(*) FROM users WHERE role = 'admin') as adminCount,
+                (SELECT COUNT(*) FROM users WHERE is_super_admin = 1) as superAdminCount,
+                (SELECT COUNT(*) FROM users WHERE created_at >= datetime('now', '-7 days')) as newUsersThisWeek,
+                (SELECT COUNT(*) FROM transactions WHERE created_at >= datetime('now', '-7 days')) as transactionsThisWeek
+            FROM transactions
+        `);
+        res.json(stats);
+    } catch (err) {
+        console.error('Error fetching stats:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/analytics', requireAdmin, async (req, res) => {
+    try {
+        const monthlyData = await db.all(`
+            SELECT 
+                strftime('%Y-%m', date) as month,
+                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense,
+                COUNT(*) as transactions
+            FROM transactions 
+            WHERE date >= date('now', '-365 days')
+            GROUP BY strftime('%Y-%m', date)
+            ORDER BY month DESC
+            LIMIT 12
+        `);
+
+        const topCategories = await db.all(`
+            SELECT 
+                category,
+                type,
+                COALESCE(SUM(amount), 0) as total
+            FROM transactions 
+            WHERE date >= date('now', '-90 days')
+            GROUP BY category, type
+            ORDER BY total DESC
+            LIMIT 10
+        `);
+
+        const userActivity = await db.all(`
+            SELECT 
+                strftime('%Y-%m-%d', created_at) as date,
+                COUNT(*) as registrations
+            FROM users
+            WHERE created_at >= date('now', '-30 days')
+            GROUP BY strftime('%Y-%m-%d', created_at)
+            ORDER BY date DESC
+        `);
+
+        res.json({
+            monthlyData: monthlyData.reverse(),
+            topCategories,
+            userActivity: userActivity.reverse()
+        });
+    } catch (err) {
+        console.error('Error fetching admin analytics:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/users/:id/transactions', requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    try {
+        const transactions = await db.all(
+            "SELECT id, type, category, amount, date FROM transactions WHERE user_id = ? ORDER BY date DESC",
+            [userId]
+        );
+        res.json(transactions);
+    } catch (err) {
+        console.error('Error fetching user transactions:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/users', requireAdmin, async (req, res) => {
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: "All fields are required" });
+    }
+
+    try {
+        const userExists = await db.get("SELECT id FROM users WHERE email = ?", [email.toLowerCase().trim()]);
+        if (userExists) {
+            return res.status(400).json({ error: "Email address already registered" });
+        }
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const result = await db.run(
+            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+            [name, email.toLowerCase().trim(), hashedPassword, role || 'user']
+        );
+        await logAudit(req.session.userId, 'admin_create_user', `Created user: ${email} with role: ${role}`);
+        res.status(201).json({ success: true, id: result.lastID });
+    } catch (err) {
+        console.error('Error creating user:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// SUPER ADMIN: Change any user's password
+app.put('/api/admin/users/:id/password', requireSuperAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    const { newPassword } = req.body;
+    
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    try {
+        const user = await db.get('SELECT id, email FROM users WHERE id = ?', [userId]);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+        await logAudit(req.session.userId, 'admin_change_password', `Changed password for user: ${user.email}`);
+        res.json({ success: true, message: "Password updated successfully" });
+    } catch (err) {
+        console.error('Error changing password:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete user (admin only)
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    try {
+        const user = await db.get("SELECT id, email, is_super_admin FROM users WHERE id = ?", [userId]);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        if (user.is_super_admin === 1) {
+            return res.status(403).json({ error: "Cannot delete the Super Admin account" });
+        }
+        
+        await db.run("DELETE FROM users WHERE id = ?", [userId]);
+        await logAudit(req.session.userId, 'admin_delete_user', `Deleted user: ${user.email}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting user:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -637,176 +937,6 @@ app.delete('/api/savings-goals/:id', requireAuth, async (req, res) => {
     }
 });
 
-// ========== ADMIN ENDPOINTS ==========
-
-app.get('/api/admin/users', requireAdmin, async (req, res) => {
-    try {
-        const users = await db.all(`
-            SELECT 
-                u.id, 
-                u.name, 
-                u.email, 
-                u.role, 
-                u.avatar, 
-                u.currency, 
-                u.created_at, 
-                u.updated_at,
-                COALESCE(COUNT(t.id), 0) as transaction_count,
-                COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as total_expense
-            FROM users u
-            LEFT JOIN transactions t ON u.id = t.user_id
-            GROUP BY u.id
-            ORDER BY u.created_at DESC
-        `);
-        res.json(users);
-    } catch (err) {
-        console.error('Error fetching users:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/admin/stats', requireAdmin, async (req, res) => {
-    try {
-        const stats = await db.get(`
-            SELECT 
-                (SELECT COUNT(*) FROM users) as totalUsers,
-                (SELECT COUNT(*) FROM transactions) as totalTransactions,
-                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense,
-                (SELECT COUNT(*) FROM users WHERE role = 'admin') as adminCount,
-                (SELECT COUNT(*) FROM users WHERE created_at >= datetime('now', '-7 days')) as newUsersThisWeek,
-                (SELECT COUNT(*) FROM transactions WHERE created_at >= datetime('now', '-7 days')) as transactionsThisWeek
-            FROM transactions
-        `);
-        res.json(stats);
-    } catch (err) {
-        console.error('Error fetching stats:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/admin/analytics', requireAdmin, async (req, res) => {
-    try {
-        const monthlyData = await db.all(`
-            SELECT 
-                strftime('%Y-%m', date) as month,
-                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense,
-                COUNT(*) as transactions
-            FROM transactions 
-            WHERE date >= date('now', '-365 days')
-            GROUP BY strftime('%Y-%m', date)
-            ORDER BY month DESC
-            LIMIT 12
-        `);
-
-        const topCategories = await db.all(`
-            SELECT 
-                category,
-                type,
-                COALESCE(SUM(amount), 0) as total
-            FROM transactions 
-            WHERE date >= date('now', '-90 days')
-            GROUP BY category, type
-            ORDER BY total DESC
-            LIMIT 10
-        `);
-
-        const userActivity = await db.all(`
-            SELECT 
-                strftime('%Y-%m-%d', created_at) as date,
-                COUNT(*) as registrations
-            FROM users
-            WHERE created_at >= date('now', '-30 days')
-            GROUP BY strftime('%Y-%m-%d', created_at)
-            ORDER BY date DESC
-        `);
-
-        res.json({
-            monthlyData: monthlyData.reverse(),
-            topCategories,
-            userActivity: userActivity.reverse()
-        });
-    } catch (err) {
-        console.error('Error fetching admin analytics:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/admin/users/:id/transactions', requireAdmin, async (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    try {
-        const transactions = await db.all(
-            "SELECT id, type, category, amount, date FROM transactions WHERE user_id = ? ORDER BY date DESC",
-            [userId]
-        );
-        res.json(transactions);
-    } catch (err) {
-        console.error('Error fetching user transactions:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/admin/users', requireAdmin, async (req, res) => {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password) {
-        return res.status(400).json({ error: "All fields are required" });
-    }
-
-    try {
-        const userExists = await db.get("SELECT id FROM users WHERE email = ?", [email.toLowerCase().trim()]);
-        if (userExists) {
-            return res.status(400).json({ error: "Email address already registered" });
-        }
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const result = await db.run(
-            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-            [name, email.toLowerCase().trim(), hashedPassword, role || 'user']
-        );
-        await logAudit(req.session.userId, 'admin_create_user', `Created user: ${email} with role: ${role}`);
-        res.status(201).json({ success: true, id: result.lastID });
-    } catch (err) {
-        console.error('Error creating user:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    try {
-        // Check if user exists
-        const user = await db.get("SELECT id, email FROM users WHERE id = ?", [userId]);
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        
-        // Delete user (cascade will handle transactions)
-        await db.run("DELETE FROM users WHERE id = ?", [userId]);
-        await logAudit(req.session.userId, 'admin_delete_user', `Deleted user: ${user.email}`);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Error deleting user:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/admin/audit-logs', requireAdmin, async (req, res) => {
-    try {
-        const logs = await db.all(`
-            SELECT al.*, u.name as user_name, u.email as user_email
-            FROM audit_logs al
-            LEFT JOIN users u ON al.user_id = u.id
-            ORDER BY al.timestamp DESC
-            LIMIT 100
-        `);
-        res.json(logs);
-    } catch (err) {
-        console.error('Error fetching audit logs:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // ========== DATA EXPORT ==========
 
 app.get('/api/export/transactions', requireAuth, async (req, res) => {
@@ -816,7 +946,6 @@ app.get('/api/export/transactions', requireAuth, async (req, res) => {
             [req.session.userId]
         );
         
-        // Create CSV
         let csv = 'Date,Type,Category,Amount,Description\n';
         transactions.forEach(t => {
             csv += `${t.date},${t.type},${t.category},${t.amount},${t.description || ''}\n`;
@@ -833,7 +962,7 @@ app.get('/api/export/transactions', requireAuth, async (req, res) => {
 // ========== SERVE STATIC FILES ==========
 
 app.get('*', (req, res, next) => {
-    const publicFiles = ['/', '/login.html', '/auth.js', '/app.js', '/admin.js', '/admin.html', '/settings.html', '/analytics.html', '/settings.js', '/analytics.js'];
+    const publicFiles = ['/', '/login.html', '/style.css', '/auth.js', '/app.js', '/admin.js', '/admin.html', '/settings.html', '/analytics.html', '/settings.js', '/analytics.js'];
     if (publicFiles.includes(req.path)) {
         return next();
     }

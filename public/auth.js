@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Render Icons
     lucide.createIcons();
 
     const tSignIn = document.getElementById("toggle-signin");

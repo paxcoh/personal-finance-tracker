@@ -27,6 +27,12 @@
             animation: none;
             width: 100%;
         }
+        .popup-toast {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .dark .popup-toast {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
         .tag {
             display: inline-flex;
             align-items: center;
@@ -60,36 +66,29 @@
         <!-- Admin Header -->
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-slate-800/80">
             <div class="flex items-center space-x-3">
-                <div class="bg-indigo-500/10 p-2.5 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30 text-indigo-500 dark:text-indigo-400">
-                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
-                </div>
+                <span id="user-avatar" class="text-3xl bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30">👤</span>
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-indigo-300 bg-clip-text text-transparent">Admin Panel</h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">User management & platform analytics</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Welcome, <span id="user-display-name" class="font-semibold text-indigo-500 dark:text-indigo-400">Admin</span>!</p>
                 </div>
             </div>
 
-            <!-- Navigation -->
             <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-                <!-- Dashboard -->
                 <a href="/index.html" class="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-emerald-500/20 dark:border-emerald-500/30 transition-all">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Dashboard</span>
                 </a>
                 
-                <!-- Settings -->
                 <a href="/settings.html" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 transition-all">
                     <i data-lucide="settings" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Settings</span>
                 </a>
                 
-                <!-- Dark Mode Toggle -->
                 <button id="theme-toggle" class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
                     <i id="theme-toggle-dark-icon" data-lucide="moon" class="w-4 h-4 hidden"></i>
                     <i id="theme-toggle-light-icon" data-lucide="sun" class="w-4 h-4 hidden"></i>
                 </button>
                 
-                <!-- Logout -->
                 <button id="btn-admin-logout" class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-red-200 dark:border-red-800/30 transition-all">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Logout</span>
@@ -120,7 +119,6 @@
         <!-- Admin Control Row -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
             
-            <!-- Provisioning Center Card -->
             <div class="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
                 <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
                     <i data-lucide="user-plus" class="text-indigo-500 w-5 h-5"></i> Create User Account
@@ -157,7 +155,6 @@
                 <p id="form-feedback" class="mt-4 text-sm font-medium"></p>
             </div>
 
-            <!-- Platform-Wide Analytics Canvas Card -->
             <div class="lg:col-span-7 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md flex flex-col justify-between">
                 <div>
                     <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
@@ -182,14 +179,14 @@
                     <thead>
                         <tr class="border-b border-slate-100 dark:border-slate-800">
                             <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">ID</th>
-                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Name</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">User</th>
                             <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</th>
                             <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Role</th>
+                            <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Password</th>
                             <th class="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="admin-user-rows" class="divide-y divide-slate-100 dark:divide-slate-800/50">
-                        <!-- Loaded dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -201,8 +198,8 @@
                 <h2 id="inspect-title" class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <i data-lucide="eye" class="text-indigo-500 w-5 h-5"></i> Audit Operations
                 </h2>
-                <button onclick="document.getElementById('user-inspect-section').classList.add('hidden')" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold px-4 py-2 rounded-xl transition-all">
-                    Close Panel
+                <button onclick="document.getElementById('user-inspect-section').classList.add('hidden')" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold px-4 py-2 rounded-xl transition-all">
+                    <i data-lucide="x" class="w-4 h-4"></i> Close Panel
                 </button>
             </div>
             
@@ -217,7 +214,6 @@
                         </tr>
                     </thead>
                     <tbody id="inspect-transaction-rows" class="divide-y divide-slate-100 dark:divide-slate-800/50">
-                        <!-- Populated dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -229,13 +225,10 @@
 
     <!-- Toast Container -->
     <div id="toast-container" class="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
-        <!-- Toasts will be inserted here -->
     </div>
 
-    <!-- UI Core Scripts -->
     <script src="admin.js"></script>
     <script>
-        // Synchronized Dark mode behavior
         const themeToggleBtn = document.getElementById('theme-toggle');
         const darkIcon = document.getElementById('theme-toggle-dark-icon');
         const lightIcon = document.getElementById('theme-toggle-light-icon');
@@ -262,25 +255,6 @@
                 localStorage.setItem('color-theme', 'dark');
             }
         });
-
-        // Load admin stats
-        async function loadAdminStats() {
-            try {
-                const res = await fetch('/api/admin/stats');
-                const stats = await res.json();
-                if (res.ok) {
-                    document.getElementById('stat-users').textContent = stats.totalUsers || 0;
-                    document.getElementById('stat-transactions').textContent = stats.totalTransactions || 0;
-                    document.getElementById('stat-income').textContent = `$${(stats.totalIncome || 0).toFixed(2)}`;
-                    document.getElementById('stat-expenses').textContent = `$${(stats.totalExpense || 0).toFixed(2)}`;
-                }
-            } catch (err) {
-                console.error('Failed to load admin stats:', err);
-            }
-        }
-
-        // Load stats when page loads
-        document.addEventListener('DOMContentLoaded', loadAdminStats);
     </script>
 </body>
 </html>

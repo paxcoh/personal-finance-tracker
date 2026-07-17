@@ -144,10 +144,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    // Render Icons
     lucide.createIcons();
 
-    // Load Analytics
     async function loadAnalytics(period = 'month') {
         try {
             const res = await fetch(`/api/analytics/overview?period=${period}`);
@@ -317,15 +315,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Period selector
     document.getElementById('period-select').addEventListener('change', (e) => {
         loadAnalytics(e.target.value);
     });
 
-    // Initial load
     loadAnalytics('month');
 
-    // Re-render charts on theme change
     const themeToggleBtn = document.getElementById('theme-toggle');
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', () => {

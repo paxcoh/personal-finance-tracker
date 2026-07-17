@@ -140,10 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    // Render Icons
     lucide.createIcons();
 
-    // Navigation
     window.showSection = function(sectionId) {
         document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
         document.getElementById(`section-${sectionId}`).classList.remove('hidden');
@@ -158,7 +156,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Load Profile
     async function loadProfile() {
         try {
             const res = await fetch('/api/user/profile');
@@ -167,6 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('profile-name').value = user.name;
                 document.getElementById('profile-email').value = user.email;
                 document.getElementById('avatar-display').textContent = user.avatar || '👤';
+                document.getElementById('user-avatar').textContent = user.avatar || '👤';
                 document.getElementById('pref-currency').value = user.currency || 'USD';
                 document.getElementById('pref-theme').value = user.theme || 'dark';
                 document.getElementById('pref-language').value = user.language || 'en';
@@ -179,7 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Load Savings Goals
     async function loadSavingsGoals() {
         try {
             const res = await fetch('/api/savings-goals');
@@ -217,14 +214,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Profile Form
     document.getElementById('profile-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const data = {
-            name: document.getElementById('profile-name').value,
-            email: document.getElementById('profile-email').value,
-            avatar: document.getElementById('avatar-display').textContent
-        };
+        const name = document.getElementById('profile-name').value;
+        const email = document.getElementById('profile-email').value;
+        const avatar = document.getElementById('avatar-display').textContent;
+        
+        const data = { name, email, avatar };
+        
         try {
             const res = await fetch('/api/user/profile', {
                 method: 'PUT',
@@ -232,6 +229,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(data)
             });
             if (res.ok) {
+                document.getElementById('user-avatar').textContent = avatar;
+                document.getElementById('user-display-name').textContent = name;
                 showPopupToast('Profile updated successfully!', 'success');
             } else {
                 const err = await res.json();
@@ -242,7 +241,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Password Form
     document.getElementById('password-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const current = document.getElementById('current-password').value;
@@ -276,7 +274,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Preferences Form
     document.getElementById('preferences-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
@@ -306,7 +303,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Save Budget Limit
     window.saveBudgetLimit = async function() {
         const amount = document.getElementById('budget-limit').value;
         if (!amount || amount <= 0) {
@@ -329,19 +325,42 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Change Avatar
     window.changeAvatar = function() {
-        const emojis = ['👤', '😊', '😎', '🤩', '🦊', '🐱', '🐶', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐧', '🐦', '🐤', '🦄', '🐬', '🐳', '🐋', '🦋', '🐝', '🐞', '🌈', '⭐', '🌙', '🌸', '🌺', '🌻', '🌹'];
+        const emojis = ['👤', '😊', '😎', '🤩', '🦊', '🐱', '🐶', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐧', '🐦', '🐤', '🦄', '🐬', '🐳', '🐋', '🦋', '🐝', '🐞', '🌈', '⭐', '🌙', '🌸', '🌺', '🌻', '🌹', '🌷', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '🍀', '🍁', '🍂', '🍃'];
+        
         const current = document.getElementById('avatar-display').textContent;
-        let newAvatar = current;
-        while (newAvatar === current) {
-            newAvatar = emojis[Math.floor(Math.random() * emojis.length)];
-        }
-        document.getElementById('avatar-display').textContent = newAvatar;
+        const avatarGrid = document.createElement('div');
+        avatarGrid.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
+        avatarGrid.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Choose Your Avatar</h3>
+                <div class="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto p-2">
+                    ${emojis.map(emoji => `
+                        <button onclick="selectAvatar('${emoji}')" 
+                                class="text-2xl p-2 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-all ${emoji === current ? 'bg-indigo-100 dark:bg-indigo-950/50 ring-2 ring-indigo-500' : ''}">
+                            ${emoji}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="closeAvatarModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-2.5 rounded-xl transition-all">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(avatarGrid);
+    };
+
+    window.selectAvatar = function(emoji) {
+        document.getElementById('avatar-display').textContent = emoji;
+        closeAvatarModal();
         document.getElementById('profile-form').dispatchEvent(new Event('submit'));
     };
 
-    // Goal Modal
+    window.closeAvatarModal = function() {
+        const modal = document.querySelector('.fixed.inset-0.z-\\[9999\\]');
+        if (modal) modal.remove();
+    };
+
     window.showAddGoalModal = function() {
         document.getElementById('goal-modal').classList.remove('hidden');
     };
@@ -375,7 +394,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Delete Goal
     window.deleteGoal = async function(id) {
         if (!confirm('Delete this savings goal?')) return;
         try {
@@ -391,7 +409,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Export Data
     window.exportData = function(format) {
         if (format === 'csv') {
             window.location.href = '/api/export/transactions';
@@ -401,7 +418,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Delete Account
     window.deleteAccount = function() {
         const confirmed = confirm('⚠️ Are you sure you want to delete your account? This action is irreversible and will delete ALL your data!');
         if (!confirmed) return;
@@ -430,7 +446,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // Initialize
     loadProfile();
     showSection('profile');
 });
