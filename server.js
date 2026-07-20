@@ -643,17 +643,11 @@ app.put('/api/super-admin/users/:id/password', requireSuperAdmin, async (req, re
 });
 
 // ============================================
-// SUPER ADMIN ANALYTICS (System-wide) - FIXED
+// SUPER ADMIN ANALYTICS (System-wide)
 // ============================================
 
 app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
-    console.log('🔍 Super Admin Analytics endpoint called');
-    
     try {
-        // Test database connection
-        console.log('📊 Fetching system stats...');
-        
-        // Get overall system stats
         const systemStats = await db.get(`
             SELECT 
                 COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
@@ -663,10 +657,6 @@ app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
             FROM transactions
         `);
 
-        console.log('✅ System stats fetched:', systemStats);
-
-        // Get monthly system performance
-        console.log('📊 Fetching monthly data...');
         const monthlyData = await db.all(`
             SELECT 
                 strftime('%Y-%m', date) as month,
@@ -681,10 +671,6 @@ app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
             LIMIT 12
         `);
 
-        console.log('✅ Monthly data fetched:', monthlyData ? monthlyData.length : 0, 'records');
-
-        // Get top categories
-        console.log('📊 Fetching top categories...');
         const topCategories = await db.all(`
             SELECT 
                 category,
@@ -697,10 +683,6 @@ app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
             LIMIT 10
         `);
 
-        console.log('✅ Top categories fetched:', topCategories ? topCategories.length : 0, 'records');
-
-        // Get user registration activity
-        console.log('📊 Fetching user activity...');
         const userActivity = await db.all(`
             SELECT 
                 strftime('%Y-%m-%d', created_at) as date,
@@ -711,10 +693,6 @@ app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
             ORDER BY date DESC
         `);
 
-        console.log('✅ User activity fetched:', userActivity ? userActivity.length : 0, 'records');
-
-        // Get top users
-        console.log('📊 Fetching top users...');
         const topUsers = await db.all(`
             SELECT 
                 u.id,
@@ -733,26 +711,16 @@ app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
             LIMIT 10
         `);
 
-        console.log('✅ Top users fetched:', topUsers ? topUsers.length : 0, 'records');
-
-        // Prepare response
-        const responseData = {
+        res.json({
             systemStats: systemStats || { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
             monthlyData: monthlyData ? monthlyData.reverse() : [],
             topCategories: topCategories || [],
             userActivity: userActivity ? userActivity.reverse() : [],
             topUsers: topUsers || []
-        };
-
-        console.log('📤 Sending response with data');
-        res.json(responseData);
+        });
 
     } catch (err) {
-        console.error('❌ Error fetching super admin analytics:', err);
-        console.error('❌ Error details:', err.message);
-        console.error('❌ Stack trace:', err.stack);
-        
-        // Return empty data instead of error
+        console.error('❌ Super Admin Analytics Error:', err.message);
         res.json({
             systemStats: { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
             monthlyData: [],

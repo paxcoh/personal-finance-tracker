@@ -94,7 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
                 loadSuperAdminDashboard();
             } else if (data.authenticated) {
-                // Logged in but not Super Admin - redirect to dashboard
                 window.location.replace("/index.html");
             } else {
                 window.location.replace("/login.html");
@@ -106,20 +105,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================
-    // LOAD SUPER ADMIN DASHBOARD (FIXED)
+    // LOAD SUPER ADMIN DASHBOARD
     // ============================================
     async function loadSuperAdminDashboard() {
         try {
             const res = await fetch('/api/super-admin/analytics');
             
-            // Check if response is ok
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
             
             const data = await res.json();
             
-            // Ensure we have data structure even if empty
             const safeData = {
                 systemStats: data.systemStats || { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
                 monthlyData: data.monthlyData || [],
@@ -140,11 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
             updateUserActivityChart(safeData.userActivity);
             updateTopUsersList(safeData.topUsers);
 
-            // If no data, show a friendly message
-            if (safeData.monthlyData.length === 0 && safeData.topCategories.length === 0) {
-                showPopupToast('No transaction data available yet. Start adding transactions!', 'info', '📊 No Data');
-            }
-
         } catch (err) {
             console.error('Failed to load super admin dashboard:', err);
             showPopupToast('Failed to load system analytics. Please try again.', 'error', '❌ Error');
@@ -155,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('sa-net-savings').textContent = '$0.00';
             document.getElementById('sa-total-users').textContent = '0';
             
-            // Create empty charts
             updateSystemTrendChart([]);
             updateSystemCategoryChart([]);
             updateUserActivityChart([]);
@@ -501,7 +492,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================
     checkSuperAdminAuth();
 
-    // Re-render charts on theme change
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', function() {
