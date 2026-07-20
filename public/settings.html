@@ -32,6 +32,40 @@
         .dark .popup-toast {
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
         }
+        .nav-link {
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        .nav-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .dark .nav-link:hover {
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+        }
+        .nav-btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        @media (max-width: 640px) {
+            .nav-btn-group {
+                gap: 0.25rem;
+            }
+            .nav-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+            }
+        }
+        .settings-nav-btn {
+            transition: all 0.2s ease;
+        }
+        .settings-nav-btn:hover {
+            transform: translateX(4px);
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
@@ -48,29 +82,30 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
-                <a href="/index.html" class="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-emerald-500/20 dark:border-emerald-500/30 transition-all">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <!-- Navigation -->
+            <div class="nav-btn-group w-full sm:w-auto justify-end">
+                <a href="/index.html" class="nav-link bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-emerald-500/20 dark:border-emerald-500/30">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 mr-1.5"></i>
                     <span class="hidden sm:inline">Dashboard</span>
                 </a>
                 
-                <a href="/analytics.html" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 transition-all">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                <a href="/analytics.html" class="nav-link bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 mr-1.5"></i>
                     <span class="hidden sm:inline">Analytics</span>
                 </a>
 
-                <a id="admin-nav-btn" href="/admin.html" class="hidden items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30 transition-all">
-                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <a id="admin-nav-btn" href="/admin.html" class="hidden nav-link items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30">
+                    <i data-lucide="shield-check" class="w-4 h-4 mr-1.5"></i>
                     <span class="hidden sm:inline">Admin</span>
                 </a>
                 
-                <button id="theme-toggle" class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                <button id="theme-toggle" class="nav-link p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
                     <i id="theme-toggle-dark-icon" data-lucide="moon" class="w-4 h-4 hidden"></i>
                     <i id="theme-toggle-light-icon" data-lucide="sun" class="w-4 h-4 hidden"></i>
                 </button>
                 
-                <button id="btn-logout" class="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-red-200 dark:border-red-800/30 transition-all">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                <button id="btn-logout" class="nav-link bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-red-200 dark:border-red-800/30">
+                    <i data-lucide="log-out" class="w-4 h-4 mr-1.5"></i>
                     <span class="hidden sm:inline">Logout</span>
                 </button>
             </div>
@@ -150,7 +185,7 @@
                     </form>
                 </section>
 
-                <!-- Security Section -->
+                <!-- Security Section with Password Toggles -->
                 <section id="section-security" class="hidden bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
                     <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                         <i data-lucide="shield" class="w-5 h-5 text-indigo-500"></i> Security Settings
@@ -159,15 +194,30 @@
                     <form id="password-form" class="space-y-4">
                         <div>
                             <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Current Password</label>
-                            <input type="password" id="current-password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all" required>
+                            <div class="relative">
+                                <input type="password" id="current-password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
+                                <button type="button" id="toggle-current-password" class="password-toggle absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">New Password</label>
-                            <input type="password" id="new-password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all" required>
+                            <div class="relative">
+                                <input type="password" id="new-password" placeholder="Minimum 6 characters" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
+                                <button type="button" id="toggle-new-password" class="password-toggle absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Confirm New Password</label>
-                            <input type="password" id="confirm-password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all" required>
+                            <div class="relative">
+                                <input type="password" id="confirm-password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
+                                <button type="button" id="toggle-confirm-password" class="password-toggle absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-600/10">
                             Change Password

@@ -140,8 +140,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    lucide.createIcons();
+    // Render Icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 
+    // ============================================
+    // PASSWORD VISIBILITY TOGGLES FOR ALL FIELDS
+    // ============================================
+    function setupPasswordToggle(buttonId, inputId) {
+        const toggleBtn = document.getElementById(buttonId);
+        const passwordInput = document.getElementById(inputId);
+        
+        if (toggleBtn && passwordInput) {
+            toggleBtn.addEventListener('click', function() {
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.setAttribute('data-lucide', 'eye-off');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.setAttribute('data-lucide', 'eye');
+                }
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            });
+        }
+    }
+
+    // Setup all password toggles
+    setupPasswordToggle('toggle-current-password', 'current-password');
+    setupPasswordToggle('toggle-new-password', 'new-password');
+    setupPasswordToggle('toggle-confirm-password', 'confirm-password');
+
+    // ============================================
+    // NAVIGATION
+    // ============================================
     window.showSection = function(sectionId) {
         document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
         document.getElementById(`section-${sectionId}`).classList.remove('hidden');
@@ -156,6 +191,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // ============================================
+    // LOAD PROFILE
+    // ============================================
     async function loadProfile() {
         try {
             const res = await fetch('/api/user/profile');
@@ -177,6 +215,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ============================================
+    // LOAD SAVINGS GOALS
+    // ============================================
     async function loadSavingsGoals() {
         try {
             const res = await fetch('/api/savings-goals');
@@ -214,6 +255,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ============================================
+    // PROFILE FORM
+    // ============================================
     document.getElementById('profile-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('profile-name').value;
@@ -230,7 +274,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             if (res.ok) {
                 document.getElementById('user-avatar').textContent = avatar;
-                document.getElementById('user-display-name').textContent = name;
+                const nameElements = document.querySelectorAll('.user-display-name');
+                nameElements.forEach(el => {
+                    el.textContent = name;
+                });
                 showPopupToast('Profile updated successfully!', 'success');
             } else {
                 const err = await res.json();
@@ -241,6 +288,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ============================================
+    // PASSWORD FORM
+    // ============================================
     document.getElementById('password-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const current = document.getElementById('current-password').value;
@@ -265,6 +315,18 @@ document.addEventListener("DOMContentLoaded", () => {
             if (res.ok) {
                 showPopupToast('Password changed successfully!', 'success');
                 document.getElementById('password-form').reset();
+                // Reset all password toggles
+                document.querySelectorAll('.password-toggle').forEach(btn => {
+                    const input = btn.closest('.relative').querySelector('input');
+                    if (input) {
+                        input.type = 'password';
+                        const icon = btn.querySelector('i');
+                        if (icon) {
+                            icon.setAttribute('data-lucide', 'eye');
+                        }
+                    }
+                });
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             } else {
                 const err = await res.json();
                 showPopupToast(err.error || 'Failed to change password', 'error');
@@ -274,6 +336,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ============================================
+    // PREFERENCES FORM
+    // ============================================
     document.getElementById('preferences-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
@@ -303,6 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ============================================
+    // BUDGET LIMIT
+    // ============================================
     window.saveBudgetLimit = async function() {
         const amount = document.getElementById('budget-limit').value;
         if (!amount || amount <= 0) {
@@ -325,6 +393,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // ============================================
+    // AVATAR SELECTION
+    // ============================================
     window.changeAvatar = function() {
         const emojis = ['👤', '😊', '😎', '🤩', '🦊', '🐱', '🐶', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐧', '🐦', '🐤', '🦄', '🐬', '🐳', '🐋', '🦋', '🐝', '🐞', '🌈', '⭐', '🌙', '🌸', '🌺', '🌻', '🌹', '🌷', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '🍀', '🍁', '🍂', '🍃'];
         
@@ -361,6 +432,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (modal) modal.remove();
     };
 
+    // ============================================
+    // SAVINGS GOALS MODAL
+    // ============================================
     window.showAddGoalModal = function() {
         document.getElementById('goal-modal').classList.remove('hidden');
     };
@@ -394,6 +468,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ============================================
+    // DELETE GOAL
+    // ============================================
     window.deleteGoal = async function(id) {
         if (!confirm('Delete this savings goal?')) return;
         try {
@@ -409,6 +486,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // ============================================
+    // EXPORT DATA
+    // ============================================
     window.exportData = function(format) {
         if (format === 'csv') {
             window.location.href = '/api/export/transactions';
@@ -418,6 +498,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // ============================================
+    // DELETE ACCOUNT
+    // ============================================
     window.deleteAccount = function() {
         const confirmed = confirm('⚠️ Are you sure you want to delete your account? This action is irreversible and will delete ALL your data!');
         if (!confirmed) return;
@@ -446,6 +529,15 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    // ============================================
+    // INITIALIZE
+    // ============================================
     loadProfile();
     showSection('profile');
+
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }, 100);
 });

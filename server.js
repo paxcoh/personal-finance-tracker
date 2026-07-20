@@ -21,7 +21,7 @@ app.use(session({
     }
 }));
 
-// Route guard middleware
+// ===== ROUTE GUARDS =====
 function requireAuth(req, res, next) {
     if (!req.session.userId) {
         return res.status(401).json({ error: "Unauthorized. Please log in." });
@@ -51,14 +51,11 @@ let db;
 
 async function ensureColumnExists(tableName, columnName, columnType, defaultValue = null) {
     try {
-        // Check if column exists
         const tableInfo = await db.all(`PRAGMA table_info(${tableName})`);
         const columnExists = tableInfo.some(col => col.name === columnName);
         
         if (!columnExists) {
             console.log(`📝 Adding column '${columnName}' to table '${tableName}'...`);
-            
-            // For SQLite, we need to add the column with a default value if provided
             let sql = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`;
             if (defaultValue !== null) {
                 sql += ` DEFAULT ${typeof defaultValue === 'string' ? `'${defaultValue}'` : defaultValue}`;
@@ -78,7 +75,6 @@ async function runMigrations() {
     console.log('🔄 Running database migrations...');
     
     try {
-        // ===== USERS TABLE MIGRATIONS =====
         await ensureColumnExists('users', 'avatar', 'TEXT', '👤');
         await ensureColumnExists('users', 'currency', 'TEXT', 'USD');
         await ensureColumnExists('users', 'theme', 'TEXT', 'dark');
@@ -86,13 +82,9 @@ async function runMigrations() {
         await ensureColumnExists('users', 'notifications', 'INTEGER', 1);
         await ensureColumnExists('users', 'budget_limit', 'REAL', 0);
         await ensureColumnExists('users', 'is_super_admin', 'INTEGER', 0);
-        
-        // ===== TRANSACTIONS TABLE MIGRATIONS =====
         await ensureColumnExists('transactions', 'description', 'TEXT', null);
         await ensureColumnExists('transactions', 'is_recurring', 'INTEGER', 0);
         await ensureColumnExists('transactions', 'recurring_frequency', 'TEXT', null);
-        
-        // ===== SAVINGS GOALS TABLE MIGRATIONS =====
         await ensureColumnExists('savings_goals', 'current_amount', 'REAL', 0);
         await ensureColumnExists('savings_goals', 'status', 'TEXT', 'active');
         
@@ -196,14 +188,8 @@ async function initializeDatabaseAndServer() {
         `);
 
         console.log('✅ Tables created successfully.');
-
-        // ===== RUN MIGRATIONS =====
         await runMigrations();
-
-        // ===== INSERT DEFAULT CATEGORIES =====
         await seedDefaultCategories();
-
-        // ===== SEED SUPER ADMIN ACCOUNT =====
         await seedSuperAdmin();
 
         app.listen(PORT, () => {
@@ -215,7 +201,6 @@ async function initializeDatabaseAndServer() {
     }
 }
 
-// ===== SEED DEFAULT CATEGORIES =====
 async function seedDefaultCategories() {
     const defaultCategories = [
         { name: 'Salary', type: 'income', color: '#10b981', icon: '💰' },
@@ -246,7 +231,6 @@ async function seedDefaultCategories() {
     }
 }
 
-// ===== SEED SUPER ADMIN =====
 async function seedSuperAdmin() {
     const adminExists = await db.get("SELECT * FROM users WHERE email = 'admin@flow.com'");
     if (!adminExists) {
@@ -258,14 +242,9 @@ async function seedSuperAdmin() {
         );
         console.log("🔒 Seeded Super Admin account: admin@flow.com / admin123");
     }
-    
-    // Ensure admin is super admin after migrations
-    await db.run(
-        "UPDATE users SET is_super_admin = 1 WHERE email = 'admin@flow.com'"
-    );
+    await db.run("UPDATE users SET is_super_admin = 1 WHERE email = 'admin@flow.com'");
 }
 
-// ===== AUDIT LOGGING FUNCTION =====
 async function logAudit(userId, action, details) {
     try {
         await db.run(
@@ -279,7 +258,9 @@ async function logAudit(userId, action, details) {
 
 initializeDatabaseAndServer();
 
-// ========== AUTHENTICATION ENDPOINTS ==========
+// ============================================
+// AUTHENTICATION ENDPOINTS
+// ============================================
 
 app.post('/api/auth/signup', async (req, res) => {
     const { name, email, password } = req.body;
@@ -329,6 +310,7 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
+        // Set ALL session variables
         req.session.userId = user.id;
         req.session.userName = user.name;
         req.session.userRole = user.role;
@@ -346,6 +328,7 @@ app.post('/api/auth/login', async (req, res) => {
             isSuperAdmin: user.is_super_admin || 0
         } });
     } catch (err) {
+        console.error('Login error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -356,6 +339,7 @@ app.post('/api/auth/logout', (req, res) => {
     }
     req.session.destroy(err => {
         if (err) {
+            console.error('Logout error:', err);
             return res.status(500).json({ error: "Failed to log out" });
         }
         res.clearCookie('connect.sid');
@@ -380,7 +364,9 @@ app.get('/api/auth/status', (req, res) => {
     }
 });
 
-// ========== USER PROFILE & SETTINGS ENDPOINTS ==========
+// ============================================
+// USER PROFILE & SETTINGS
+// ============================================
 
 app.get('/api/user/profile', requireAuth, async (req, res) => {
     try {
@@ -408,7 +394,6 @@ app.put('/api/user/profile', requireAuth, async (req, res) => {
             }
         }
 
-        // Build dynamic update query
         const updates = [];
         const params = [];
         
@@ -486,8 +471,11 @@ app.delete('/api/user/delete-account', requireAuth, async (req, res) => {
     }
 });
 
-// ========== ADMIN ENDPOINTS ==========
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
 
+// Get all users (exclude Super Admin)
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
     try {
         const users = await db.all(`
@@ -506,6 +494,7 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
                 COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as total_expense
             FROM users u
             LEFT JOIN transactions t ON u.id = t.user_id
+            WHERE u.is_super_admin = 0
             GROUP BY u.id
             ORDER BY u.created_at DESC
         `);
@@ -516,17 +505,36 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
     }
 });
 
+// Get single user
+app.get('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    try {
+        const user = await db.get(
+            'SELECT id, name, email, role, avatar, password FROM users WHERE id = ? AND is_super_admin = 0',
+            [userId]
+        );
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        res.json(user);
+    } catch (err) {
+        console.error('Error fetching user:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get admin stats
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     try {
         const stats = await db.get(`
             SELECT 
-                (SELECT COUNT(*) FROM users) as totalUsers,
+                (SELECT COUNT(*) FROM users WHERE is_super_admin = 0) as totalUsers,
                 (SELECT COUNT(*) FROM transactions) as totalTransactions,
                 COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
                 COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense,
-                (SELECT COUNT(*) FROM users WHERE role = 'admin') as adminCount,
+                (SELECT COUNT(*) FROM users WHERE role = 'admin' AND is_super_admin = 0) as adminCount,
                 (SELECT COUNT(*) FROM users WHERE is_super_admin = 1) as superAdminCount,
-                (SELECT COUNT(*) FROM users WHERE created_at >= datetime('now', '-7 days')) as newUsersThisWeek,
+                (SELECT COUNT(*) FROM users WHERE created_at >= datetime('now', '-7 days') AND is_super_admin = 0) as newUsersThisWeek,
                 (SELECT COUNT(*) FROM transactions WHERE created_at >= datetime('now', '-7 days')) as transactionsThisWeek
             FROM transactions
         `);
@@ -537,54 +545,7 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/admin/analytics', requireAdmin, async (req, res) => {
-    try {
-        const monthlyData = await db.all(`
-            SELECT 
-                strftime('%Y-%m', date) as month,
-                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense,
-                COUNT(*) as transactions
-            FROM transactions 
-            WHERE date >= date('now', '-365 days')
-            GROUP BY strftime('%Y-%m', date)
-            ORDER BY month DESC
-            LIMIT 12
-        `);
-
-        const topCategories = await db.all(`
-            SELECT 
-                category,
-                type,
-                COALESCE(SUM(amount), 0) as total
-            FROM transactions 
-            WHERE date >= date('now', '-90 days')
-            GROUP BY category, type
-            ORDER BY total DESC
-            LIMIT 10
-        `);
-
-        const userActivity = await db.all(`
-            SELECT 
-                strftime('%Y-%m-%d', created_at) as date,
-                COUNT(*) as registrations
-            FROM users
-            WHERE created_at >= date('now', '-30 days')
-            GROUP BY strftime('%Y-%m-%d', created_at)
-            ORDER BY date DESC
-        `);
-
-        res.json({
-            monthlyData: monthlyData.reverse(),
-            topCategories,
-            userActivity: userActivity.reverse()
-        });
-    } catch (err) {
-        console.error('Error fetching admin analytics:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
+// Get user transactions (admin only)
 app.get('/api/admin/users/:id/transactions', requireAdmin, async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     try {
@@ -599,6 +560,7 @@ app.get('/api/admin/users/:id/transactions', requireAdmin, async (req, res) => {
     }
 });
 
+// Create user (admin only)
 app.post('/api/admin/users', requireAdmin, async (req, res) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password) {
@@ -606,6 +568,11 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
     }
 
     try {
+        // Only Super Admin can create admin accounts
+        if (role === 'admin' && req.session.isSuperAdmin !== 1) {
+            return res.status(403).json({ error: "Only Super Admin can create admin accounts" });
+        }
+
         const userExists = await db.get("SELECT id FROM users WHERE email = ?", [email.toLowerCase().trim()]);
         if (userExists) {
             return res.status(400).json({ error: "Email address already registered" });
@@ -623,8 +590,38 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
     }
 });
 
-// SUPER ADMIN: Change any user's password
-app.put('/api/admin/users/:id/password', requireSuperAdmin, async (req, res) => {
+// Delete user (admin only)
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    try {
+        const user = await db.get("SELECT id, email, role, is_super_admin FROM users WHERE id = ?", [userId]);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        // Only Super Admin can delete admin accounts
+        if (user.role === 'admin' && req.session.isSuperAdmin !== 1) {
+            return res.status(403).json({ error: "Only Super Admin can delete admin accounts" });
+        }
+        if (user.is_super_admin === 1) {
+            return res.status(403).json({ error: "Cannot delete the Super Admin account" });
+        }
+        
+        await db.run("DELETE FROM users WHERE id = ?", [userId]);
+        await logAudit(req.session.userId, 'admin_delete_user', `Deleted user: ${user.email}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// SUPER ADMIN ONLY ENDPOINTS
+// ============================================
+
+// Change user password (Super Admin only)
+app.put('/api/super-admin/users/:id/password', requireSuperAdmin, async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     const { newPassword } = req.body;
     
@@ -640,7 +637,7 @@ app.put('/api/admin/users/:id/password', requireSuperAdmin, async (req, res) => 
 
         const hashedPassword = await bcrypt.hash(newPassword, 12);
         await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
-        await logAudit(req.session.userId, 'admin_change_password', `Changed password for user: ${user.email}`);
+        await logAudit(req.session.userId, 'super_admin_change_password', `Changed password for user: ${user.email}`);
         res.json({ success: true, message: "Password updated successfully" });
     } catch (err) {
         console.error('Error changing password:', err);
@@ -648,29 +645,9 @@ app.put('/api/admin/users/:id/password', requireSuperAdmin, async (req, res) => 
     }
 });
 
-// Delete user (admin only)
-app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    try {
-        const user = await db.get("SELECT id, email, is_super_admin FROM users WHERE id = ?", [userId]);
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        
-        if (user.is_super_admin === 1) {
-            return res.status(403).json({ error: "Cannot delete the Super Admin account" });
-        }
-        
-        await db.run("DELETE FROM users WHERE id = ?", [userId]);
-        await logAudit(req.session.userId, 'admin_delete_user', `Deleted user: ${user.email}`);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Error deleting user:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ========== TRANSACTIONS ENDPOINTS ==========
+// ============================================
+// TRANSACTIONS ENDPOINTS
+// ============================================
 
 app.get('/api/transactions', requireAuth, async (req, res) => {
     const { startDate, endDate, category, type, search } = req.query;
@@ -767,7 +744,9 @@ app.delete('/api/transactions/:id', requireAuth, async (req, res) => {
     }
 });
 
-// ========== ANALYTICS ENDPOINTS ==========
+// ============================================
+// USER PERSONAL ANALYTICS
+// ============================================
 
 app.get('/api/analytics/overview', requireAuth, async (req, res) => {
     const { period } = req.query;
@@ -827,7 +806,9 @@ app.get('/api/analytics/overview', requireAuth, async (req, res) => {
     }
 });
 
-// ========== BUDGET ENDPOINTS ==========
+// ============================================
+// BUDGET ENDPOINTS
+// ============================================
 
 app.get('/api/budgets', requireAuth, async (req, res) => {
     try {
@@ -863,7 +844,9 @@ app.post('/api/budgets', requireAuth, async (req, res) => {
     }
 });
 
-// ========== CATEGORIES ENDPOINTS ==========
+// ============================================
+// CATEGORIES ENDPOINTS
+// ============================================
 
 app.get('/api/categories', requireAuth, async (req, res) => {
     try {
@@ -894,7 +877,9 @@ app.post('/api/categories', requireAuth, async (req, res) => {
     }
 });
 
-// ========== SAVINGS GOALS ENDPOINTS ==========
+// ============================================
+// SAVINGS GOALS ENDPOINTS
+// ============================================
 
 app.get('/api/savings-goals', requireAuth, async (req, res) => {
     try {
@@ -937,7 +922,9 @@ app.delete('/api/savings-goals/:id', requireAuth, async (req, res) => {
     }
 });
 
-// ========== DATA EXPORT ==========
+// ============================================
+// DATA EXPORT
+// ============================================
 
 app.get('/api/export/transactions', requireAuth, async (req, res) => {
     try {
@@ -959,7 +946,9 @@ app.get('/api/export/transactions', requireAuth, async (req, res) => {
     }
 });
 
-// ========== SERVE STATIC FILES ==========
+// ============================================
+// SERVE STATIC FILES
+// ============================================
 
 app.get('*', (req, res, next) => {
     const publicFiles = ['/', '/login.html', '/style.css', '/auth.js', '/app.js', '/admin.js', '/admin.html', '/settings.html', '/analytics.html', '/settings.js', '/analytics.js'];

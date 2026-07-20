@@ -1,6 +1,30 @@
 document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
 
+    // ===== CHECK IF ALREADY LOGGED IN - FIXED =====
+    async function checkIfAlreadyLoggedIn() {
+        try {
+            const response = await fetch('/api/auth/status');
+            const data = await response.json();
+            if (data.authenticated) {
+                // Already logged in - redirect based on role
+                if (data.user.role === 'admin') {
+                    window.location.href = "/admin.html";
+                } else {
+                    window.location.href = "/index.html";
+                }
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Session check failed:', error);
+            return false;
+        }
+    }
+
+    // Run the check
+    checkIfAlreadyLoggedIn();
+
     const tSignIn = document.getElementById("toggle-signin");
     const tSignUp = document.getElementById("toggle-signup");
     const tBg = document.getElementById("toggle-bg");
@@ -231,7 +255,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Login Form Request Handler
+    // ============================================
+    // LOGIN FORM HANDLER - FIXED
+    // ============================================
     formLogin.addEventListener("submit", async (e) => {
         e.preventDefault();
         lError.classList.add("hidden");
@@ -249,19 +275,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             if (res.ok) {
                 showPopupToast(`Welcome back, ${data.user.name}!`, 'success', '🎉 Login Successful');
+                
+                // FIX: Simple redirect based on role - no loops
                 setTimeout(() => {
                     if (data.user.role === 'admin') {
-                        window.location.href = "/admin.html";
+                        window.location.replace("/admin.html");
                     } else {
-                        window.location.href = "/index.html";
+                        window.location.replace("/index.html");
                     }
-                }, 1000);
+                }, 800);
             } else {
                 lError.querySelector(".msg").textContent = data.error;
                 lError.classList.remove("hidden");
                 showPopupToast(data.error, 'error', 'Login Failed');
             }
-        } catch {
+        } catch (err) {
+            console.error('Login error:', err);
             lError.querySelector(".msg").textContent = "Connection issue. Please verify server status.";
             lError.classList.remove("hidden");
             showPopupToast("Connection issue. Please verify server status.", 'error', 'Network Error');
@@ -270,7 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Sign up Form Request Handler
+    // ============================================
+    // SIGNUP FORM HANDLER
+    // ============================================
     formSignup.addEventListener("submit", async (e) => {
         e.preventDefault();
         sError.classList.add("hidden");
@@ -290,14 +321,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (res.ok) {
                 showPopupToast(`Account created successfully! Welcome ${name}!`, 'success', '🎉 Welcome Aboard!');
                 setTimeout(() => {
-                    window.location.href = "/index.html";
+                    window.location.replace("/index.html");
                 }, 1000);
             } else {
                 sError.querySelector(".msg").textContent = data.error;
                 sError.classList.remove("hidden");
                 showPopupToast(data.error, 'error', 'Registration Failed');
             }
-        } catch {
+        } catch (err) {
+            console.error('Signup error:', err);
             sError.querySelector(".msg").textContent = "Network error. Try again.";
             sError.classList.remove("hidden");
             showPopupToast("Network error. Try again.", 'error', 'Network Error');

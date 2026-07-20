@@ -144,8 +144,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
+    // ============================================
+    // LOAD ANALYTICS (Personal)
+    // ============================================
     async function loadAnalytics(period = 'month') {
         try {
             const res = await fetch(`/api/analytics/overview?period=${period}`);

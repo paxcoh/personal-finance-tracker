@@ -154,13 +154,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    // Check Auth Session
+    // ============================================
+    // CHECK AUTH SESSION - FIXED
+    // ============================================
     async function checkAuthSession() {
         try {
             const response = await fetch('/api/auth/status');
             const data = await response.json();
             
             if (data.authenticated) {
+                // User is logged in - show dashboard
                 document.getElementById("user-display-name").textContent = data.user.name;
                 document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
                 
@@ -169,20 +172,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 loadTransactions();
             } else {
-                window.location.href = "/login.html"; 
+                // Not logged in - redirect to login
+                window.location.replace("/login.html");
             }
         } catch (error) {
-            window.location.href = "/login.html";
+            console.error('Auth check failed:', error);
+            window.location.replace("/login.html");
         }
     }
 
+    // ============================================
+    // LOGOUT
+    // ============================================
     document.getElementById("btn-logout").addEventListener("click", async () => {
         try {
             const response = await fetch('/api/auth/logout', { method: 'POST' });
             if (response.ok) {
                 showPopupToast("Logged out successfully!", "info", "👋 See You Soon");
                 setTimeout(() => {
-                    window.location.href = "/login.html";
+                    window.location.replace("/login.html");
                 }, 800);
             }
         } catch (error) {
@@ -190,6 +198,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ============================================
+    // LOAD TRANSACTIONS
+    // ============================================
     async function loadTransactions() {
         const response = await fetch('/api/transactions');
         const transactions = await response.json();
