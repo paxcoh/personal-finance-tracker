@@ -310,7 +310,6 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Set ALL session variables
         req.session.userId = user.id;
         req.session.userName = user.name;
         req.session.userRole = user.role;
@@ -568,7 +567,6 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
     }
 
     try {
-        // Only Super Admin can create admin accounts
         if (role === 'admin' && req.session.isSuperAdmin !== 1) {
             return res.status(403).json({ error: "Only Super Admin can create admin accounts" });
         }
@@ -599,7 +597,6 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
         
-        // Only Super Admin can delete admin accounts
         if (user.role === 'admin' && req.session.isSuperAdmin !== 1) {
             return res.status(403).json({ error: "Only Super Admin can delete admin accounts" });
         }
@@ -641,6 +638,189 @@ app.put('/api/super-admin/users/:id/password', requireSuperAdmin, async (req, re
         res.json({ success: true, message: "Password updated successfully" });
     } catch (err) {
         console.error('Error changing password:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// SUPER ADMIN ANALYTICS (System-wide) - FIXED
+// ============================================
+
+app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
+    console.log('🔍 Super Admin Analytics endpoint called');
+    
+    try {
+        // Test database connection
+        console.log('📊 Fetching system stats...');
+        
+        // Get overall system stats
+        const systemStats = await db.get(`
+            SELECT 
+                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense,
+                COUNT(*) as totalTransactions,
+                COUNT(DISTINCT user_id) as activeUsers
+            FROM transactions
+        `);
+
+        console.log('✅ System stats fetched:', systemStats);
+
+        // Get monthly system performance
+        console.log('📊 Fetching monthly data...');
+        const monthlyData = await db.all(`
+            SELECT 
+                strftime('%Y-%m', date) as month,
+                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense,
+                COUNT(*) as transactions,
+                COUNT(DISTINCT user_id) as activeUsers
+            FROM transactions 
+            WHERE date >= date('now', '-365 days')
+            GROUP BY strftime('%Y-%m', date)
+            ORDER BY month DESC
+            LIMIT 12
+        `);
+
+        console.log('✅ Monthly data fetched:', monthlyData ? monthlyData.length : 0, 'records');
+
+        // Get top categories
+        console.log('📊 Fetching top categories...');
+        const topCategories = await db.all(`
+            SELECT 
+                category,
+                type,
+                COALESCE(SUM(amount), 0) as total
+            FROM transactions 
+            WHERE date >= date('now', '-90 days')
+            GROUP BY category, type
+            ORDER BY total DESC
+            LIMIT 10
+        `);
+
+        console.log('✅ Top categories fetched:', topCategories ? topCategories.length : 0, 'records');
+
+        // Get user registration activity
+        console.log('📊 Fetching user activity...');
+        const userActivity = await db.all(`
+            SELECT 
+                strftime('%Y-%m-%d', created_at) as date,
+                COUNT(*) as registrations
+            FROM users
+            WHERE created_at >= date('now', '-30 days')
+            GROUP BY strftime('%Y-%m-%d', created_at)
+            ORDER BY date DESC
+        `);
+
+        console.log('✅ User activity fetched:', userActivity ? userActivity.length : 0, 'records');
+
+        // Get top users
+        console.log('📊 Fetching top users...');
+        const topUsers = await db.all(`
+            SELECT 
+                u.id,
+                u.name,
+                u.email,
+                u.role,
+                COUNT(t.id) as transactionCount,
+                COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as totalIncome,
+                COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as totalExpense,
+                COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END), 0) as netSavings
+            FROM users u
+            LEFT JOIN transactions t ON u.id = t.user_id
+            WHERE u.is_super_admin = 0
+            GROUP BY u.id
+            ORDER BY transactionCount DESC
+            LIMIT 10
+        `);
+
+        console.log('✅ Top users fetched:', topUsers ? topUsers.length : 0, 'records');
+
+        // Prepare response
+        const responseData = {
+            systemStats: systemStats || { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
+            monthlyData: monthlyData ? monthlyData.reverse() : [],
+            topCategories: topCategories || [],
+            userActivity: userActivity ? userActivity.reverse() : [],
+            topUsers: topUsers || []
+        };
+
+        console.log('📤 Sending response with data');
+        res.json(responseData);
+
+    } catch (err) {
+        console.error('❌ Error fetching super admin analytics:', err);
+        console.error('❌ Error details:', err.message);
+        console.error('❌ Stack trace:', err.stack);
+        
+        // Return empty data instead of error
+        res.json({
+            systemStats: { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
+            monthlyData: [],
+            topCategories: [],
+            userActivity: [],
+            topUsers: []
+        });
+    }
+});
+
+// ============================================
+// USER PERSONAL ANALYTICS
+// ============================================
+
+app.get('/api/analytics/overview', requireAuth, async (req, res) => {
+    const { period } = req.query;
+    const userId = req.session.userId;
+
+    try {
+        let dateFilter = '';
+        if (period === 'month') {
+            dateFilter = "AND date >= date('now', '-30 days')";
+        } else if (period === 'quarter') {
+            dateFilter = "AND date >= date('now', '-90 days')";
+        } else if (period === 'year') {
+            dateFilter = "AND date >= date('now', '-365 days')";
+        }
+
+        const overview = await db.get(`
+            SELECT 
+                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense,
+                COUNT(*) as totalTransactions,
+                COALESCE(SUM(CASE WHEN type = 'income' THEN 1 ELSE 0 END), 0) as incomeCount,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN 1 ELSE 0 END), 0) as expenseCount
+            FROM transactions 
+            WHERE user_id = ? ${dateFilter}
+        `, [userId]);
+
+        const monthlyData = await db.all(`
+            SELECT 
+                strftime('%Y-%m', date) as month,
+                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
+            FROM transactions 
+            WHERE user_id = ? ${dateFilter}
+            GROUP BY strftime('%Y-%m', date)
+            ORDER BY month DESC
+            LIMIT 12
+        `, [userId]);
+
+        const categoryData = await db.all(`
+            SELECT 
+                category,
+                type,
+                COALESCE(SUM(amount), 0) as total
+            FROM transactions 
+            WHERE user_id = ? ${dateFilter}
+            GROUP BY category, type
+            ORDER BY total DESC
+        `, [userId]);
+
+        res.json({
+            overview,
+            monthlyData: monthlyData.reverse(),
+            categoryData
+        });
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
@@ -739,68 +919,6 @@ app.delete('/api/transactions/:id', requireAuth, async (req, res) => {
         }
         await logAudit(req.session.userId, 'transaction_delete', `Deleted transaction ${id}`);
         res.json({ message: "Deleted successfully" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ============================================
-// USER PERSONAL ANALYTICS
-// ============================================
-
-app.get('/api/analytics/overview', requireAuth, async (req, res) => {
-    const { period } = req.query;
-    const userId = req.session.userId;
-
-    try {
-        let dateFilter = '';
-        if (period === 'month') {
-            dateFilter = "AND date >= date('now', '-30 days')";
-        } else if (period === 'quarter') {
-            dateFilter = "AND date >= date('now', '-90 days')";
-        } else if (period === 'year') {
-            dateFilter = "AND date >= date('now', '-365 days')";
-        }
-
-        const overview = await db.get(`
-            SELECT 
-                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense,
-                COUNT(*) as totalTransactions,
-                COALESCE(SUM(CASE WHEN type = 'income' THEN 1 ELSE 0 END), 0) as incomeCount,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN 1 ELSE 0 END), 0) as expenseCount
-            FROM transactions 
-            WHERE user_id = ? ${dateFilter}
-        `, [userId]);
-
-        const monthlyData = await db.all(`
-            SELECT 
-                strftime('%Y-%m', date) as month,
-                COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
-            FROM transactions 
-            WHERE user_id = ? ${dateFilter}
-            GROUP BY strftime('%Y-%m', date)
-            ORDER BY month DESC
-            LIMIT 12
-        `, [userId]);
-
-        const categoryData = await db.all(`
-            SELECT 
-                category,
-                type,
-                COALESCE(SUM(amount), 0) as total
-            FROM transactions 
-            WHERE user_id = ? ${dateFilter}
-            GROUP BY category, type
-            ORDER BY total DESC
-        `, [userId]);
-
-        res.json({
-            overview,
-            monthlyData: monthlyData.reverse(),
-            categoryData
-        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -951,7 +1069,21 @@ app.get('/api/export/transactions', requireAuth, async (req, res) => {
 // ============================================
 
 app.get('*', (req, res, next) => {
-    const publicFiles = ['/', '/login.html', '/style.css', '/auth.js', '/app.js', '/admin.js', '/admin.html', '/settings.html', '/analytics.html', '/settings.js', '/analytics.js'];
+    const publicFiles = [
+        '/', 
+        '/login.html', 
+        '/style.css', 
+        '/auth.js', 
+        '/app.js', 
+        '/admin.js', 
+        '/admin.html', 
+        '/settings.html', 
+        '/analytics.html', 
+        '/super-analytics.html', 
+        '/settings.js', 
+        '/analytics.js', 
+        '/super-analytics.js'
+    ];
     if (publicFiles.includes(req.path)) {
         return next();
     }

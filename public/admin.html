@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanceFlow | Admin Control Panel</title>
+    <title>FinanceFlow | Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -85,7 +84,6 @@
                 font-size: 0.75rem;
             }
         }
-        /* Modal animation */
         .modal-enter {
             animation: modalFadeIn 0.3s ease-out;
         }
@@ -110,7 +108,7 @@
             <div class="flex items-center space-x-3">
                 <span id="user-avatar" class="text-3xl bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30">👤</span>
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-indigo-300 bg-clip-text text-transparent">Admin Panel</h1>
+                    <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-indigo-300 bg-clip-text text-transparent">User Management</h1>
                     <p class="text-sm text-slate-500 dark:text-slate-400">
                         Welcome, <span id="user-display-name" class="font-semibold text-indigo-500 dark:text-indigo-400">Admin</span>!
                         <span id="super-admin-badge" class="hidden ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-full border border-yellow-500/30">
@@ -125,6 +123,11 @@
                 <a href="/index.html" class="nav-link bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-emerald-500/20 dark:border-emerald-500/30">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 mr-1.5"></i>
                     <span class="hidden sm:inline">Dashboard</span>
+                </a>
+                
+                <a href="/super-analytics.html" class="nav-link bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 mr-1.5"></i>
+                    <span class="hidden sm:inline">Analytics</span>
                 </a>
                 
                 <a href="/settings.html" class="nav-link bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -145,7 +148,7 @@
         </header>
 
         <!-- Admin Stats Overview -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8" id="admin-stats">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
                 <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Users</p>
                 <p id="stat-users" class="text-2xl font-bold text-slate-900 dark:text-white mt-2">0</p>
@@ -162,16 +165,10 @@
                 <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Platform Expenses</p>
                 <p id="stat-expenses" class="text-2xl font-bold text-red-500 dark:text-red-400 mt-2">$0.00</p>
             </div>
-            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Super Admins</p>
-                <p id="stat-super-admin" class="text-2xl font-bold text-yellow-500 dark:text-yellow-400 mt-2">0</p>
-            </div>
         </div>
 
-        <!-- Admin Control Row -->
+        <!-- Create User Card -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
-            
-            <!-- Provisioning Center Card -->
             <div class="lg:col-span-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
                 <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
                     <i data-lucide="user-plus" class="text-indigo-500 w-5 h-5"></i> Create User Account
@@ -209,35 +206,33 @@
                 <p id="form-feedback" class="mt-4 text-sm font-medium"></p>
             </div>
 
-            <!-- Platform Stats Card (replacing chart temporarily) -->
+            <!-- Quick Stats -->
             <div class="lg:col-span-7 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                        <i data-lucide="activity" class="text-indigo-500 w-5 h-5"></i> Platform Overview
-                    </h2>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Total Users</p>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-users-large">0</p>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Total Transactions</p>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-transactions-large">0</p>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Total Income</p>
-                            <p class="text-2xl font-bold text-emerald-500 dark:text-emerald-400" id="stat-income-large">$0.00</p>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Total Expenses</p>
-                            <p class="text-2xl font-bold text-red-500 dark:text-red-400" id="stat-expenses-large">$0.00</p>
-                        </div>
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="activity" class="text-indigo-500 w-5 h-5"></i> Platform Overview
+                </h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Total Users</p>
+                        <p class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-users-large">0</p>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Total Transactions</p>
+                        <p class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-transactions-large">0</p>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Total Income</p>
+                        <p class="text-2xl font-bold text-emerald-500 dark:text-emerald-400" id="stat-income-large">$0.00</p>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-950/40 rounded-xl p-4">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Total Expenses</p>
+                        <p class="text-2xl font-bold text-red-500 dark:text-red-400" id="stat-expenses-large">$0.00</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Registered User Accounts Grid Panel -->
+        <!-- Registered Users -->
         <section class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md mb-8">
             <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
                 <i data-lucide="users" class="text-indigo-500 w-5 h-5"></i> Registered Users
@@ -267,7 +262,7 @@
                 <h2 id="inspect-title" class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <i data-lucide="eye" class="text-indigo-500 w-5 h-5"></i> Audit Operations
                 </h2>
-                <button onclick="document.getElementById('user-inspect-section').classList.add('hidden')" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold px-4 py-2 rounded-xl transition-all">
+                <button onclick="closeInspectPanel()" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold px-4 py-2 rounded-xl transition-all">
                     <i data-lucide="x" class="w-4 h-4"></i> Close Panel
                 </button>
             </div>

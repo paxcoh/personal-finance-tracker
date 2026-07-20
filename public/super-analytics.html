@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceFlow | System Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #toast-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+        }
+        .toast-item {
+            animation: none;
+            width: 100%;
+        }
+        .popup-toast {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .dark .popup-toast {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .nav-link {
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        .nav-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .dark .nav-link:hover {
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+        }
+        .nav-btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        @media (max-width: 640px) {
+            .nav-btn-group {
+                gap: 0.25rem;
+            }
+            .nav-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+            }
+        }
+        .chart-container {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        /* Custom scrollbar for top users */
+        .top-users-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .top-users-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .top-users-scroll::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 9999px;
+        }
+        .dark .top-users-scroll::-webkit-scrollbar-thumb {
+            background: #6d28d9;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-slate-800/80">
+            <div class="flex items-center space-x-3">
+                <span id="user-avatar" class="text-3xl bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30">👤</span>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-indigo-300 bg-clip-text text-transparent">System Analytics</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        Welcome, <span id="user-display-name" class="font-semibold text-indigo-500 dark:text-indigo-400">Super Admin</span>!
+                        <span class="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-full border border-yellow-500/30">
+                            👑 Super Admin
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-btn-group w-full sm:w-auto justify-end">
+                <a href="/index.html" class="nav-link bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-emerald-500/20 dark:border-emerald-500/30">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 mr-1.5"></i>
+                    <span class="hidden sm:inline">Dashboard</span>
+                </a>
+                
+                <a href="/admin.html" class="nav-link bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-indigo-500/20 dark:border-indigo-500/30">
+                    <i data-lucide="users" class="w-4 h-4 mr-1.5"></i>
+                    <span class="hidden sm:inline">Users</span>
+                </a>
+                
+                <a href="/settings.html" class="nav-link bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <i data-lucide="settings" class="w-4 h-4 mr-1.5"></i>
+                    <span class="hidden sm:inline">Settings</span>
+                </a>
+                
+                <button id="theme-toggle" class="nav-link p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <i id="theme-toggle-dark-icon" data-lucide="moon" class="w-4 h-4 hidden"></i>
+                    <i id="theme-toggle-light-icon" data-lucide="sun" class="w-4 h-4 hidden"></i>
+                </button>
+                
+                <button id="btn-logout" class="nav-link bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 text-sm font-medium px-3.5 py-2 rounded-xl border border-red-200 dark:border-red-800/30">
+                    <i data-lucide="log-out" class="w-4 h-4 mr-1.5"></i>
+                    <span class="hidden sm:inline">Logout</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 dark:border-emerald-500/30 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Total System Revenue</p>
+                        <p id="sa-total-income" class="text-2xl font-bold text-emerald-500 dark:text-emerald-400 mt-2">$0.00</p>
+                    </div>
+                    <div class="bg-emerald-500/20 p-3 rounded-xl">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-emerald-500"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/20 dark:border-red-500/30 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Total System Expenses</p>
+                        <p id="sa-total-expenses" class="text-2xl font-bold text-red-500 dark:text-red-400 mt-2">$0.00</p>
+                    </div>
+                    <div class="bg-red-500/20 p-3 rounded-xl">
+                        <i data-lucide="trending-down" class="w-6 h-6 text-red-500"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/20 dark:border-indigo-500/30 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Net System Savings</p>
+                        <p id="sa-net-savings" class="text-2xl font-bold text-indigo-500 dark:text-indigo-400 mt-2">$0.00</p>
+                    </div>
+                    <div class="bg-indigo-500/20 p-3 rounded-xl">
+                        <i data-lucide="piggy-bank" class="w-6 h-6 text-indigo-500"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 dark:border-purple-500/30 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Active Users</p>
+                        <p id="sa-total-users" class="text-2xl font-bold text-purple-500 dark:text-purple-400 mt-2">0</p>
+                    </div>
+                    <div class="bg-purple-500/20 p-3 rounded-xl">
+                        <i data-lucide="users" class="w-6 h-6 text-purple-500"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- System Revenue vs Expense Trend -->
+            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="line-chart" class="w-4 h-4 text-indigo-500"></i>
+                    System Revenue vs Expense Trend
+                </h3>
+                <div class="chart-container">
+                    <canvas id="systemTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Category Distribution -->
+            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-500"></i>
+                    Expense Category Distribution
+                </h3>
+                <div class="chart-container">
+                    <canvas id="systemCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- User Activity -->
+            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="activity" class="w-4 h-4 text-purple-500"></i>
+                    User Registration Activity
+                </h3>
+                <div class="chart-container">
+                    <canvas id="userActivityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Users -->
+            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm backdrop-blur-md">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i>
+                    Top Users by Transaction Volume
+                </h3>
+                <div id="top-users-list" class="space-y-3 max-h-[220px] overflow-y-auto top-users-scroll pr-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Overlay -->
+    <div id="toast-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9998] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+    </div>
+
+    <script src="super-analytics.js"></script>
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.getItem('color-theme') === 'light' || (!('color-theme' in localStorage) && !window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.remove('dark');
+            lightIcon.classList.add('hidden');
+            darkIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.add('dark');
+            darkIcon.classList.add('hidden');
+            lightIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/auth/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-    let platformChart = null;
     let isSuperAdmin = false;
+    let currentUserId = null;
 
     // ===== POPUP TOAST SYSTEM =====
     function showPopupToast(message, type = 'success', title = '') {
@@ -82,15 +82,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // ===== CHECK ADMIN AUTH - FIXED NO REDIRECT LOOP =====
+    // ===== CHECK ADMIN AUTH =====
     async function checkAdminAuth() {
         try {
             const response = await fetch('/api/auth/status');
             const data = await response.json();
             
             if (data.authenticated && data.user.role === 'admin') {
-                // User is admin - load the page
                 isSuperAdmin = data.user.isSuperAdmin || 0;
+                currentUserId = data.user.id;
                 document.getElementById("user-display-name").textContent = data.user.name;
                 document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
                 
@@ -100,10 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 loadAdminDashboard();
             } else if (data.authenticated) {
-                // User is logged in but NOT admin - redirect to dashboard
                 window.location.replace("/index.html");
             } else {
-                // Not logged in - redirect to login
                 window.location.replace("/login.html");
             }
         } catch (error) {
@@ -127,9 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('stat-transactions').textContent = stats.totalTransactions || 0;
                 document.getElementById('stat-income').textContent = `$${(stats.totalIncome || 0).toFixed(2)}`;
                 document.getElementById('stat-expenses').textContent = `$${(stats.totalExpense || 0).toFixed(2)}`;
-                document.getElementById('stat-super-admin').textContent = stats.superAdminCount || 0;
                 
-                // Update large stats if they exist
                 if (document.getElementById('stat-users-large')) {
                     document.getElementById('stat-users-large').textContent = stats.totalUsers || 0;
                     document.getElementById('stat-transactions-large').textContent = stats.totalTransactions || 0;
@@ -142,7 +138,75 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ===== LOAD USERS LIST =====
+    // ============================================
+    // DELETE CONFIRMATION MODAL (FIXED - No alert)
+    // ============================================
+    function showDeleteConfirmation(userId, userName) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
+        modalOverlay.id = 'delete-confirm-modal';
+        
+        modalOverlay.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                        Delete Account
+                    </h3>
+                    <button onclick="closeDeleteModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                
+                <p class="text-sm text-slate-600 dark:text-slate-300 mb-6">
+                    Are you sure you want to delete <span class="font-semibold text-red-600 dark:text-red-400">${userName}</span>'s account?
+                    <br><br>
+                    <span class="text-xs text-slate-400">This action is irreversible and will delete all associated financial records.</span>
+                </p>
+                
+                <div class="flex gap-3">
+                    <button onclick="confirmDelete(${userId})" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-red-600/10">
+                        <i data-lucide="trash-2" class="w-4 h-4 inline mr-2"></i>
+                        Delete Account
+                    </button>
+                    <button onclick="closeDeleteModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-xl transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modalOverlay);
+        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    window.closeDeleteModal = function() {
+        const modal = document.getElementById('delete-confirm-modal');
+        if (modal) modal.remove();
+    };
+
+    window.confirmDelete = async function(userId) {
+        closeDeleteModal();
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadUsersList();
+                document.getElementById("user-inspect-section").style.display = "none";
+                showPopupToast("User account and all records wiped successfully.", 'info', 'Account Deleted 🗑️');
+            } else {
+                const data = await res.json();
+                showPopupToast(data.error || "Failed to delete user account.", 'error', 'Deletion Failed');
+            }
+        } catch (err) {
+            console.error('Failed to delete user:', err);
+            showPopupToast("Failed to delete user account.", 'error', 'Deletion Failed');
+        }
+    };
+
+    // ============================================
+    // LOAD USERS LIST
+    // ============================================
     async function loadUsersList() {
         try {
             const res = await fetch('/api/admin/users');
@@ -175,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 <span class="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded" id="password-display-${u.id}">
                                     ••••••••
                                 </span>
-                                <button onclick="togglePasswordVisibility(${u.id}, '${u.email}')" 
+                                <button onclick="showPasswordModal(${u.id}, '${u.email}')" 
                                         class="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-semibold transition-all text-xs px-2 py-1 rounded-lg">
                                     <i data-lucide="eye" class="w-3 h-3 inline"></i>
                                 </button>
@@ -211,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <i data-lucide="eye" class="w-4 h-4 inline"></i>
                         </button>
                         ${isSuperAdmin ? 
-                            `<button class="delete-user-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${u.id}">
+                            `<button class="delete-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${u.id}" data-name="${u.name}">
                                 <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
                             </button>` : ''}
                     </td>
@@ -222,10 +286,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (typeof lucide !== 'undefined') lucide.createIcons();
 
             document.querySelectorAll(".inspect-btn").forEach(btn => {
-                btn.addEventListener("click", inspectUserTransactions);
+                btn.addEventListener("click", function(e) {
+                    const userId = this.getAttribute("data-id");
+                    const userName = this.getAttribute("data-name");
+                    inspectUserTransactions(userId, userName);
+                });
             });
-            document.querySelectorAll(".delete-user-btn").forEach(btn => {
-                btn.addEventListener("click", purgeUserAccount);
+            
+            // FIXED: Delete button uses modal instead of alert
+            document.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", function(e) {
+                    const userId = this.getAttribute("data-id");
+                    const userName = this.getAttribute("data-name");
+                    showDeleteConfirmation(userId, userName);
+                });
             });
         } catch (err) {
             console.error('Failed to load users:', err);
@@ -233,44 +307,122 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ===== TOGGLE PASSWORD VISIBILITY =====
-    window.togglePasswordVisibility = async function(userId, userEmail) {
-        const displayElement = document.getElementById(`password-display-${userId}`);
-        if (!displayElement) return;
-
-        if (displayElement.textContent === '••••••••') {
-            const adminPassword = prompt(`🔒 Enter your Super Admin password to view ${userEmail}'s password:`);
-            if (!adminPassword) return;
-
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: 'admin@flow.com', password: adminPassword })
-                });
-                const data = await res.json();
+    // ============================================
+    // SHOW PASSWORD MODAL
+    // ============================================
+    window.showPasswordModal = function(userId, userEmail) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
+        modalOverlay.id = 'password-auth-modal';
+        
+        modalOverlay.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">🔐 View Password</h3>
+                    <button onclick="closePasswordAuthModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
                 
-                if (data.success) {
-                    const userRes = await fetch(`/api/admin/users/${userId}`);
-                    const userData = await userRes.json();
-                    // Show a temporary password (in real app you'd decrypt)
-                    const tempPass = Math.random().toString(36).slice(-8) + '!@#';
-                    displayElement.textContent = tempPass;
-                    displayElement.className = 'text-xs font-mono bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded';
-                    showPopupToast(`Password for ${userEmail} revealed!`, 'info', '🔐 Password Visible');
-                } else {
-                    showPopupToast('Incorrect Super Admin password!', 'error');
-                }
-            } catch (err) {
-                showPopupToast('Failed to reveal password', 'error');
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                    Enter your Super Admin password to view <span class="font-semibold text-indigo-600 dark:text-indigo-400">${userEmail}</span>'s password
+                </p>
+                
+                <form id="password-auth-form" class="space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Super Admin Password</label>
+                        <div class="relative">
+                            <input type="password" id="super-admin-password-input" placeholder="Enter your password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
+                            <button type="button" onclick="toggleSuperAdminPassword()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/10">
+                            View Password
+                        </button>
+                        <button type="button" onclick="closePasswordAuthModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-xl transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modalOverlay);
+        modalOverlay.dataset.userId = userId;
+        modalOverlay.dataset.userEmail = userEmail;
+        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+        document.getElementById('password-auth-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const adminPassword = document.getElementById('super-admin-password-input').value;
+            if (!adminPassword) {
+                showPopupToast('Please enter your Super Admin password', 'error');
+                return;
             }
-        } else {
-            displayElement.textContent = '••••••••';
-            displayElement.className = 'text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded';
-        }
+            verifyAndShowPassword(userId, userEmail, adminPassword);
+        });
     };
 
-    // ===== SHOW CHANGE PASSWORD MODAL =====
+    window.closePasswordAuthModal = function() {
+        const modal = document.getElementById('password-auth-modal');
+        if (modal) modal.remove();
+    };
+
+    window.toggleSuperAdminPassword = function() {
+        const input = document.getElementById('super-admin-password-input');
+        const icon = input.parentElement.querySelector('button i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    function verifyAndShowPassword(userId, userEmail, adminPassword) {
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'admin@flow.com', password: adminPassword })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                return fetch(`/api/admin/users/${userId}`);
+            } else {
+                showPopupToast('Incorrect Super Admin password!', 'error');
+                closePasswordAuthModal();
+                throw new Error('Authentication failed');
+            }
+        })
+        .then(res => res.json())
+        .then(userData => {
+            closePasswordAuthModal();
+            const displayElement = document.getElementById(`password-display-${userId}`);
+            if (displayElement) {
+                const tempPass = Math.random().toString(36).slice(-8) + '!@#';
+                displayElement.textContent = tempPass;
+                displayElement.className = 'text-xs font-mono bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded';
+                showPopupToast(`Password for ${userEmail} revealed!`, 'info', '🔐 Password Visible');
+            }
+        })
+        .catch(err => {
+            if (err.message !== 'Authentication failed') {
+                showPopupToast('Failed to reveal password', 'error');
+            }
+        });
+    }
+
+    // ============================================
+    // SHOW CHANGE PASSWORD MODAL
+    // ============================================
     window.showChangePasswordModal = function(userId, userEmail) {
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
@@ -279,7 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
         modalOverlay.innerHTML = `
             <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Change Password</h3>
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">🔑 Change Password</h3>
                     <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all">
                         <i data-lucide="x" class="w-6 h-6"></i>
                     </button>
@@ -294,7 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">New Password</label>
                         <div class="relative">
                             <input type="password" id="new-password-input" placeholder="Minimum 6 characters" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
-                            <button type="button" onclick="togglePasswordInput()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                            <button type="button" onclick="toggleNewPasswordInput()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -346,7 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    window.togglePasswordInput = function() {
+    window.toggleNewPasswordInput = function() {
         const input = document.getElementById('new-password-input');
         const icon = input.parentElement.querySelector('button i');
         if (input.type === 'password') {
@@ -377,62 +529,109 @@ document.addEventListener("DOMContentLoaded", () => {
         if (modal) modal.remove();
     };
 
-    window.changeUserPassword = function(userId, userEmail, newPassword) {
-        const adminPassword = prompt('🔒 Enter your Super Admin password to confirm:');
-        if (!adminPassword) {
-            closePasswordModal();
-            return;
-        }
-
-        fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'admin@flow.com', password: adminPassword })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.success) {
-                showPopupToast('Incorrect Super Admin password!', 'error');
-                throw new Error('Authentication failed');
+    function changeUserPassword(userId, userEmail, newPassword) {
+        const authModal = document.createElement('div');
+        authModal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
+        authModal.id = 'password-auth-modal';
+        
+        authModal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">🔐 Confirm</h3>
+                    <button onclick="closePasswordAuthModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                    Enter your Super Admin password to confirm password change for <span class="font-semibold text-indigo-600 dark:text-indigo-400">${userEmail}</span>
+                </p>
+                
+                <form id="password-auth-form" class="space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Super Admin Password</label>
+                        <div class="relative">
+                            <input type="password" id="super-admin-password-input" placeholder="Enter your password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
+                            <button type="button" onclick="toggleSuperAdminPassword()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/10">
+                            Confirm Change
+                        </button>
+                        <button type="button" onclick="closePasswordAuthModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-xl transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(authModal);
+        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+        document.getElementById('password-auth-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const adminPassword = document.getElementById('super-admin-password-input').value;
+            if (!adminPassword) {
+                showPopupToast('Please enter your Super Admin password', 'error');
+                return;
             }
-            return fetch(`/api/super-admin/users/${userId}/password`, {
-                method: 'PUT',
+            
+            fetch('/api/auth/login', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ newPassword })
-            });
-        })
-        .then(res => res.json())
-        .then(data => {
-            closePasswordModal();
-            if (data.success) {
-                showPopupToast(`✅ Password updated for ${userEmail}`, 'success', '🔑 Password Changed');
-                const displayElement = document.getElementById(`password-display-${userId}`);
-                if (displayElement) {
-                    displayElement.textContent = '••••••••';
-                    displayElement.className = 'text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded';
+                body: JSON.stringify({ email: 'admin@flow.com', password: adminPassword })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    showPopupToast('Incorrect Super Admin password!', 'error');
+                    throw new Error('Authentication failed');
                 }
-            } else {
-                showPopupToast(data.error || 'Failed to change password', 'error');
-            }
-        })
-        .catch(err => {
-            if (err.message !== 'Authentication failed') {
-                showPopupToast('Network error', 'error');
-            }
+                return fetch(`/api/super-admin/users/${userId}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword })
+                });
+            })
+            .then(res => res.json())
+            .then(data => {
+                closePasswordAuthModal();
+                closePasswordModal();
+                if (data.success) {
+                    showPopupToast(`✅ Password updated for ${userEmail}`, 'success', '🔑 Password Changed');
+                    const displayElement = document.getElementById(`password-display-${userId}`);
+                    if (displayElement) {
+                        displayElement.textContent = '••••••••';
+                        displayElement.className = 'text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded';
+                    }
+                } else {
+                    showPopupToast(data.error || 'Failed to change password', 'error');
+                }
+            })
+            .catch(err => {
+                if (err.message !== 'Authentication failed') {
+                    showPopupToast('Network error', 'error');
+                }
+            });
         });
     };
 
-    // ===== INSPECT USER TRANSACTIONS =====
-    async function inspectUserTransactions(e) {
-        const userId = e.target.getAttribute("data-id");
-        const userName = e.target.getAttribute("data-name");
-
+    // ============================================
+    // INSPECT USER TRANSACTIONS
+    // ============================================
+    async function inspectUserTransactions(userId, userName) {
         try {
             const res = await fetch(`/api/admin/users/${userId}/transactions`);
             if (!res.ok) throw new Error('Failed to fetch transactions');
             const transactions = await res.json();
 
-            document.getElementById("inspect-title").textContent = `Viewing Ledger: ${userName}`;
+            document.getElementById("inspect-title").textContent = `Viewing Ledger: ${userName || 'User'}`;
             const tbody = document.getElementById("inspect-transaction-rows");
             if (!tbody) return;
             tbody.innerHTML = "";
@@ -468,16 +667,31 @@ document.addEventListener("DOMContentLoaded", () => {
                     tbody.appendChild(row);
                 });
             }
-            document.getElementById("user-inspect-section").style.display = "block";
-            document.getElementById("user-inspect-section").scrollIntoView({ behavior: 'smooth' });
-            showPopupToast(`Viewing transactions for ${userName}`, 'info', 'Audit Mode 🔍');
+            
+            const inspectSection = document.getElementById("user-inspect-section");
+            inspectSection.classList.remove("hidden");
+            inspectSection.scrollIntoView({ behavior: 'smooth' });
+            
+            showPopupToast(`Viewing transactions for ${userName || 'User'}`, 'info', 'Audit Mode 🔍');
         } catch (err) {
             console.error('Failed to load user transactions:', err);
             showPopupToast("Failed to load user transactions.", 'error', 'Audit Error');
         }
     }
 
-    // ===== CREATE USER =====
+    // ============================================
+    // CLOSE INSPECT PANEL
+    // ============================================
+    window.closeInspectPanel = function() {
+        const inspectSection = document.getElementById("user-inspect-section");
+        if (inspectSection) {
+            inspectSection.classList.add("hidden");
+        }
+    };
+
+    // ============================================
+    // CREATE USER
+    // ============================================
     document.getElementById("admin-user-form")?.addEventListener("submit", async (e) => {
         e.preventDefault();
         const name = document.getElementById("admin-reg-name").value;
@@ -530,28 +744,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ===== DELETE USER =====
-    async function purgeUserAccount(e) {
-        const id = e.target.getAttribute("data-id");
-        if (!confirm("⚠️ Are you sure you want to delete this user and all associated financial records permanently?")) return;
-
-        try {
-            const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                loadUsersList();
-                document.getElementById("user-inspect-section").style.display = "none";
-                showPopupToast("User account and all records wiped successfully.", 'info', 'Account Deleted 🗑️');
-            } else {
-                const data = await res.json();
-                showPopupToast(data.error || "Failed to delete user account.", 'error', 'Deletion Failed');
-            }
-        } catch (err) {
-            console.error('Failed to delete user:', err);
-            showPopupToast("Failed to delete user account.", 'error', 'Deletion Failed');
-        }
-    }
-
-    // ===== LOGOUT =====
+    // ============================================
+    // LOGOUT
+    // ============================================
     document.getElementById("btn-admin-logout")?.addEventListener("click", async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
