@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let systemTrendChart = null;
     let systemCategoryChart = null;
     let userActivityChart = null;
+    let currencySymbol = '$';
 
     // ===== POPUP TOAST SYSTEM =====
     function showPopupToast(message, type = 'success', title = '') {
@@ -92,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.authenticated && data.user.role === 'admin' && data.user.isSuperAdmin === 1) {
                 document.getElementById("user-display-name").textContent = data.user.name;
                 document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
+                currencySymbol = data.user.currencySymbol || '$';
                 loadSuperAdminDashboard();
             } else if (data.authenticated) {
                 window.location.replace("/index.html");
@@ -125,13 +127,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 topUsers: data.topUsers || []
             };
 
-            // Update stats
-            document.getElementById('sa-total-income').textContent = `$${(safeData.systemStats.totalIncome || 0).toFixed(2)}`;
-            document.getElementById('sa-total-expenses').textContent = `$${(safeData.systemStats.totalExpense || 0).toFixed(2)}`;
-            document.getElementById('sa-net-savings').textContent = `$${((safeData.systemStats.totalIncome || 0) - (safeData.systemStats.totalExpense || 0)).toFixed(2)}`;
+            document.getElementById('sa-total-income').textContent = `${currencySymbol}${(safeData.systemStats.totalIncome || 0).toFixed(2)}`;
+            document.getElementById('sa-total-expenses').textContent = `${currencySymbol}${(safeData.systemStats.totalExpense || 0).toFixed(2)}`;
+            document.getElementById('sa-net-savings').textContent = `${currencySymbol}${((safeData.systemStats.totalIncome || 0) - (safeData.systemStats.totalExpense || 0)).toFixed(2)}`;
             document.getElementById('sa-total-users').textContent = safeData.systemStats.activeUsers || 0;
 
-            // Update charts
             updateSystemTrendChart(safeData.monthlyData);
             updateSystemCategoryChart(safeData.topCategories);
             updateUserActivityChart(safeData.userActivity);
@@ -141,10 +141,9 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error('Failed to load super admin dashboard:', err);
             showPopupToast('Failed to load system analytics. Please try again.', 'error', '❌ Error');
             
-            // Show empty state
-            document.getElementById('sa-total-income').textContent = '$0.00';
-            document.getElementById('sa-total-expenses').textContent = '$0.00';
-            document.getElementById('sa-net-savings').textContent = '$0.00';
+            document.getElementById('sa-total-income').textContent = `${currencySymbol}0.00`;
+            document.getElementById('sa-total-expenses').textContent = `${currencySymbol}0.00`;
+            document.getElementById('sa-net-savings').textContent = `${currencySymbol}0.00`;
             document.getElementById('sa-total-users').textContent = '0';
             
             updateSystemTrendChart([]);
@@ -179,12 +178,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     plugins: {
                         legend: {
                             labels: { color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + currencySymbol + context.parsed.y.toFixed(2);
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' }
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b',
+                                callback: function(value) { return currencySymbol + value.toLocaleString(); }
+                            }
                         },
                         x: {
                             ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' }
@@ -233,6 +242,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b',
                             font: { size: 11 }
                         }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + currencySymbol + context.parsed.y.toFixed(2);
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -240,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         beginAtZero: true,
                         ticks: {
                             color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b',
-                            callback: function(value) { return '$' + value.toLocaleString(); }
+                            callback: function(value) { return currencySymbol + value.toLocaleString(); }
                         }
                     },
                     x: {
@@ -280,6 +296,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         legend: { 
                             labels: {
                                 color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + currencySymbol + context.parsed.toFixed(2);
+                                }
                             }
                         }
                     }
@@ -345,6 +368,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b',
                             font: { size: 10 },
                             padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + currencySymbol + context.parsed.toFixed(2);
+                            }
                         }
                     }
                 }
@@ -479,7 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="text-right">
                     <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">${user.transactionCount || 0} txns</p>
                     <p class="text-xs ${(user.netSavings || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}">
-                        ${(user.netSavings || 0) >= 0 ? '+' : ''}$${(user.netSavings || 0).toFixed(2)}
+                        ${(user.netSavings || 0) >= 0 ? '+' : ''}${currencySymbol}${(user.netSavings || 0).toFixed(2)}
                     </p>
                 </div>
             `;

@@ -140,39 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
-    // Render Icons
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-
-    // ============================================
-    // PASSWORD VISIBILITY TOGGLES FOR ALL FIELDS
-    // ============================================
-    function setupPasswordToggle(buttonId, inputId) {
-        const toggleBtn = document.getElementById(buttonId);
-        const passwordInput = document.getElementById(inputId);
-        
-        if (toggleBtn && passwordInput) {
-            toggleBtn.addEventListener('click', function() {
-                const icon = this.querySelector('i');
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.setAttribute('data-lucide', 'eye-off');
-                } else {
-                    passwordInput.type = 'password';
-                    icon.setAttribute('data-lucide', 'eye');
-                }
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            });
-        }
-    }
-
-    // Setup all password toggles
-    setupPasswordToggle('toggle-current-password', 'current-password');
-    setupPasswordToggle('toggle-new-password', 'new-password');
-    setupPasswordToggle('toggle-confirm-password', 'confirm-password');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // ============================================
     // NAVIGATION
@@ -289,60 +257,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ============================================
-    // PASSWORD FORM
-    // ============================================
-    document.getElementById('password-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const current = document.getElementById('current-password').value;
-        const newPass = document.getElementById('new-password').value;
-        const confirm = document.getElementById('confirm-password').value;
-
-        if (newPass !== confirm) {
-            showPopupToast('Passwords do not match', 'error');
-            return;
-        }
-        if (newPass.length < 6) {
-            showPopupToast('Password must be at least 6 characters', 'error');
-            return;
-        }
-
-        try {
-            const res = await fetch('/api/user/change-password', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentPassword: current, newPassword: newPass })
-            });
-            if (res.ok) {
-                showPopupToast('Password changed successfully!', 'success');
-                document.getElementById('password-form').reset();
-                // Reset all password toggles
-                document.querySelectorAll('.password-toggle').forEach(btn => {
-                    const input = btn.closest('.relative').querySelector('input');
-                    if (input) {
-                        input.type = 'password';
-                        const icon = btn.querySelector('i');
-                        if (icon) {
-                            icon.setAttribute('data-lucide', 'eye');
-                        }
-                    }
-                });
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            } else {
-                const err = await res.json();
-                showPopupToast(err.error || 'Failed to change password', 'error');
-            }
-        } catch {
-            showPopupToast('Network error', 'error');
-        }
-    });
-
-    // ============================================
-    // PREFERENCES FORM
+    // PREFERENCES FORM (With Custom Currency)
     // ============================================
     document.getElementById('preferences-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        let currency = document.getElementById('pref-currency').value;
+        
+        // Check if custom currency is selected
+        if (currency === 'custom') {
+            currency = document.getElementById('custom-currency-input').value.trim().toUpperCase();
+            if (!currency) {
+                showPopupToast('Please enter a currency code', 'error');
+                return;
+            }
+        }
+        
         const data = {
-            currency: document.getElementById('pref-currency').value,
+            currency: currency,
             theme: document.getElementById('pref-theme').value,
             language: document.getElementById('pref-language').value,
             notifications: document.getElementById('pref-notifications').checked ? 1 : 0
@@ -360,11 +292,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else if (data.theme === 'light') {
                     document.documentElement.classList.remove('dark');
                 }
+                
+                // Reload page to update currency symbols everywhere
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             } else {
                 showPopupToast('Failed to save preferences', 'error');
             }
         } catch {
             showPopupToast('Network error', 'error');
+        }
+    });
+
+    // ============================================
+    // CURRENCY SELECT HANDLING
+    // ============================================
+    document.getElementById('pref-currency').addEventListener('change', function() {
+        const customInput = document.getElementById('custom-currency-input');
+        if (this.value === 'custom') {
+            customInput.classList.remove('hidden');
+            customInput.focus();
+        } else {
+            customInput.classList.add('hidden');
         }
     });
 

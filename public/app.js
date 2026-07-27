@@ -13,6 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("date").value = new Date().toISOString().split('T')[0];
 
+    let currencySymbol = '$';
+
     // ============================================
     // POPUP TOAST NOTIFICATION SYSTEM
     // ============================================
@@ -155,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('toast-overlay')?.addEventListener('click', closeAllPopupToasts);
 
     // ============================================
-    // CHECK AUTH SESSION - FIXED
+    // CHECK AUTH SESSION
     // ============================================
     async function checkAuthSession() {
         try {
@@ -163,21 +165,24 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             
             if (data.authenticated) {
-                // User is logged in - show dashboard
                 document.getElementById("user-display-name").textContent = data.user.name;
                 document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
+                currencySymbol = data.user.currencySymbol || '$';
                 
                 if (data.user.role === 'admin') {
                     document.getElementById("admin-nav-btn").style.display = "flex";
+                    document.getElementById("admin-nav-btn").classList.remove('hidden');
+                }
+                if (data.user.isSuperAdmin === 1) {
+                    document.getElementById("system-analytics-nav").classList.remove('hidden');
                 }
                 loadTransactions();
             } else {
-                // Not logged in - redirect to login
-                window.location.replace("/login.html");
+                window.location.href = "/login.html"; 
             }
         } catch (error) {
             console.error('Auth check failed:', error);
-            window.location.replace("/login.html");
+            window.location.href = "/login.html";
         }
     }
 
@@ -190,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok) {
                 showPopupToast("Logged out successfully!", "info", "👋 See You Soon");
                 setTimeout(() => {
-                    window.location.replace("/login.html");
+                    window.location.href = "/login.html";
                 }, 800);
             }
         } catch (error) {
@@ -203,8 +208,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================
     async function loadTransactions() {
         const response = await fetch('/api/transactions');
-        const transactions = await response.json();
-        updateUI(transactions);
+        const data = await response.json();
+        if (data.currencySymbol) {
+            currencySymbol = data.currencySymbol;
+        }
+        updateUI(data.transactions || []);
+    }
+
+    function formatAmount(amount, type) {
+        const sign = type === 'income' ? '+' : '-';
+        return `${sign}${currencySymbol}${amount.toFixed(2)}`;
     }
 
     function updateUI(transactions) {
@@ -240,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         </span>
                     </td>
                     <td class="py-4 text-sm font-bold ${t.type === 'income' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}">
-                        ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
+                        ${formatAmount(t.amount, t.type)}
                     </td>
                     <td class="py-4 text-sm text-right space-x-2">
                         <button class="edit-btn text-indigo-500 hover:text-indigo-400 font-semibold transition-all mr-3" data-id="${t.id}" data-type="${t.type}" data-category="${t.category}" data-amount="${t.amount}" data-date="${t.date}">
@@ -257,9 +270,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const currentBalance = totalIncome - totalExpense;
 
-        balanceEl.textContent = `${currentBalance < 0 ? '-' : ''}$${Math.abs(currentBalance).toFixed(2)}`;
-        incomeEl.textContent = `+$${totalIncome.toFixed(2)}`;
-        expenseEl.textContent = `-$${totalExpense.toFixed(2)}`;
+        balanceEl.textContent = `${currentBalance < 0 ? '-' : ''}${currencySymbol}${Math.abs(currentBalance).toFixed(2)}`;
+        incomeEl.textContent = `+${currencySymbol}${totalIncome.toFixed(2)}`;
+        expenseEl.textContent = `-${currencySymbol}${totalExpense.toFixed(2)}`;
 
         document.querySelectorAll(".delete-btn").forEach(btn => {
             btn.addEventListener("click", deleteTransaction);

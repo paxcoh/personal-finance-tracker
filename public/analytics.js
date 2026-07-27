@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let trendChartInstance = null;
     let categoryChartInstance = null;
     let incomeCategoryChartInstance = null;
+    let currencySymbol = '$';
 
     // ============================================
     // POPUP TOAST NOTIFICATION SYSTEM
@@ -154,6 +155,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch(`/api/analytics/overview?period=${period}`);
             const data = await res.json();
             
+            // Get currency symbol
+            if (data.currencySymbol) {
+                currencySymbol = data.currencySymbol;
+            }
+            
             if (!data.overview) {
                 showPopupToast('No data available for this period', 'info');
                 return;
@@ -161,9 +167,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const income = data.overview.totalIncome || 0;
             const expenses = data.overview.totalExpense || 0;
-            document.getElementById('analytics-income').textContent = `$${income.toFixed(2)}`;
-            document.getElementById('analytics-expenses').textContent = `$${expenses.toFixed(2)}`;
-            document.getElementById('analytics-savings').textContent = `$${(income - expenses).toFixed(2)}`;
+            document.getElementById('analytics-income').textContent = `${currencySymbol}${income.toFixed(2)}`;
+            document.getElementById('analytics-expenses').textContent = `${currencySymbol}${expenses.toFixed(2)}`;
+            document.getElementById('analytics-savings').textContent = `${currencySymbol}${(income - expenses).toFixed(2)}`;
             document.getElementById('analytics-count').textContent = data.overview.totalTransactions || 0;
 
             updateTrendChart(data.monthlyData);
@@ -218,13 +224,21 @@ document.addEventListener("DOMContentLoaded", () => {
                         labels: {
                             color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b'
                         }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + currencySymbol + context.parsed.y.toFixed(2);
+                            }
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'
+                            color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b',
+                            callback: function(value) { return currencySymbol + value.toLocaleString(); }
                         }
                     },
                     x: {
@@ -274,6 +288,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#1e293b',
                             font: { size: 11 }
                         }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + currencySymbol + context.parsed.toFixed(2);
+                            }
+                        }
                     }
                 }
             }
@@ -310,8 +331,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span class="text-xs text-slate-500 dark:text-slate-400 ml-2">${savingsRate >= 0 ? '📈' : '📉'} ${Math.abs(savingsRate).toFixed(1)}% saved</span>
                 </div>
                 <div class="text-right">
-                    <span class="text-xs text-emerald-500 dark:text-emerald-400">+$${income.toFixed(2)}</span>
-                    <span class="text-xs text-red-500 dark:text-red-400 ml-2">-$${expense.toFixed(2)}</span>
+                    <span class="text-xs text-emerald-500 dark:text-emerald-400">+${currencySymbol}${income.toFixed(2)}</span>
+                    <span class="text-xs text-red-500 dark:text-red-400 ml-2">-${currencySymbol}${expense.toFixed(2)}</span>
                 </div>
             `;
             container.appendChild(div);
@@ -326,7 +347,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const themeToggleBtn = document.getElementById('theme-toggle');
     if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
+        themeToggleBtn.addEventListener('click', function() {
             setTimeout(() => loadAnalytics(document.getElementById('period-select').value), 100);
         });
     }

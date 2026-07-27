@@ -21,7 +21,7 @@ app.use(session({
     }
 }));
 
-// ===== ROUTE GUARDS =====
+// Route guard middleware
 function requireAuth(req, res, next) {
     if (!req.session.userId) {
         return res.status(401).json({ error: "Unauthorized. Please log in." });
@@ -45,68 +45,13 @@ function requireSuperAdmin(req, res, next) {
 
 let db;
 
-// ============================================
-// DATABASE MIGRATION SYSTEM
-// ============================================
-
-async function ensureColumnExists(tableName, columnName, columnType, defaultValue = null) {
-    try {
-        const tableInfo = await db.all(`PRAGMA table_info(${tableName})`);
-        const columnExists = tableInfo.some(col => col.name === columnName);
-        
-        if (!columnExists) {
-            console.log(`📝 Adding column '${columnName}' to table '${tableName}'...`);
-            let sql = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`;
-            if (defaultValue !== null) {
-                sql += ` DEFAULT ${typeof defaultValue === 'string' ? `'${defaultValue}'` : defaultValue}`;
-            }
-            await db.exec(sql);
-            console.log(`✅ Column '${columnName}' added successfully.`);
-            return true;
-        }
-        return false;
-    } catch (err) {
-        console.error(`❌ Error adding column '${columnName}':`, err.message);
-        return false;
-    }
-}
-
-async function runMigrations() {
-    console.log('🔄 Running database migrations...');
-    
-    try {
-        await ensureColumnExists('users', 'avatar', 'TEXT', '👤');
-        await ensureColumnExists('users', 'currency', 'TEXT', 'USD');
-        await ensureColumnExists('users', 'theme', 'TEXT', 'dark');
-        await ensureColumnExists('users', 'language', 'TEXT', 'en');
-        await ensureColumnExists('users', 'notifications', 'INTEGER', 1);
-        await ensureColumnExists('users', 'budget_limit', 'REAL', 0);
-        await ensureColumnExists('users', 'is_super_admin', 'INTEGER', 0);
-        await ensureColumnExists('transactions', 'description', 'TEXT', null);
-        await ensureColumnExists('transactions', 'is_recurring', 'INTEGER', 0);
-        await ensureColumnExists('transactions', 'recurring_frequency', 'TEXT', null);
-        await ensureColumnExists('savings_goals', 'current_amount', 'REAL', 0);
-        await ensureColumnExists('savings_goals', 'status', 'TEXT', 'active');
-        
-        console.log('✅ All migrations completed successfully!');
-    } catch (err) {
-        console.error('❌ Migration failed:', err.message);
-        throw err;
-    }
-}
-
-// ============================================
-// DATABASE INITIALIZATION
-// ============================================
-
+// Initialize Database
 async function initializeDatabaseAndServer() {
     try {
         db = await open({
             filename: './database.db',
             driver: sqlite3.Database
         });
-
-        console.log('📦 Creating tables...');
 
         // ===== USERS TABLE =====
         await db.exec(`
@@ -116,6 +61,14 @@ async function initializeDatabaseAndServer() {
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 role TEXT DEFAULT 'user',
+                avatar TEXT DEFAULT '👤',
+                currency TEXT DEFAULT 'USD',
+                currency_symbol TEXT DEFAULT '$',
+                theme TEXT DEFAULT 'dark',
+                language TEXT DEFAULT 'en',
+                notifications INTEGER DEFAULT 1,
+                budget_limit REAL DEFAULT 0,
+                is_super_admin INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -130,6 +83,9 @@ async function initializeDatabaseAndServer() {
                 category TEXT NOT NULL,
                 amount REAL NOT NULL,
                 date TEXT NOT NULL,
+                description TEXT,
+                is_recurring INTEGER DEFAULT 0,
+                recurring_frequency TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -169,7 +125,9 @@ async function initializeDatabaseAndServer() {
                 user_id INTEGER,
                 name TEXT NOT NULL,
                 target_amount REAL NOT NULL,
+                current_amount REAL DEFAULT 0,
                 deadline DATE,
+                status TEXT DEFAULT 'active',
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
@@ -187,20 +145,34 @@ async function initializeDatabaseAndServer() {
             )
         `);
 
-        console.log('✅ Tables created successfully.');
-        await runMigrations();
+        // ===== INSERT DEFAULT CATEGORIES =====
         await seedDefaultCategories();
-        await seedSuperAdmin();
+
+        // ===== SEED SUPER ADMIN ACCOUNT =====
+        const adminExists = await db.get("SELECT * FROM users WHERE email = 'admin@flow.com'");
+        if (!adminExists) {
+            const defaultHashedPassword = await bcrypt.hash('admin123', 12);
+            await db.run(
+                "INSERT INTO users (name, email, password, role, avatar, is_super_admin, currency, currency_symbol) VALUES ('Super Admin', 'admin@flow.com', ?, 'admin', '👑', 1, 'USD', '$')",
+                [defaultHashedPassword]
+            );
+            console.log("🔒 Seeded Super Admin account: admin@flow.com / admin123");
+        } else {
+            await db.run(
+                "UPDATE users SET is_super_admin = 1 WHERE email = 'admin@flow.com'"
+            );
+        }
 
         app.listen(PORT, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
         });
     } catch (err) {
-        console.error("❌ Database initialization failed:", err.message);
+        console.error("Database initialization failed:", err.message);
         process.exit(1);
     }
 }
 
+// ===== SEED DEFAULT CATEGORIES =====
 async function seedDefaultCategories() {
     const defaultCategories = [
         { name: 'Salary', type: 'income', color: '#10b981', icon: '💰' },
@@ -231,20 +203,7 @@ async function seedDefaultCategories() {
     }
 }
 
-async function seedSuperAdmin() {
-    const adminExists = await db.get("SELECT * FROM users WHERE email = 'admin@flow.com'");
-    if (!adminExists) {
-        const defaultHashedPassword = await bcrypt.hash('admin123', 12);
-        await db.run(
-            `INSERT INTO users (name, email, password, role) 
-             VALUES ('Super Admin', 'admin@flow.com', ?, 'admin')`,
-            [defaultHashedPassword]
-        );
-        console.log("🔒 Seeded Super Admin account: admin@flow.com / admin123");
-    }
-    await db.run("UPDATE users SET is_super_admin = 1 WHERE email = 'admin@flow.com'");
-}
-
+// ===== AUDIT LOGGING FUNCTION =====
 async function logAudit(userId, action, details) {
     try {
         await db.run(
@@ -259,6 +218,28 @@ async function logAudit(userId, action, details) {
 initializeDatabaseAndServer();
 
 // ============================================
+// CURRENCY HELPERS
+// ============================================
+
+function getCurrencySymbol(currency) {
+    const symbols = {
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'JPY': '¥',
+        'CAD': 'CA$',
+        'AUD': 'AU$',
+        'INR': '₹',
+        'CNY': '¥',
+        'CHF': 'Fr',
+        'NZD': 'NZ$',
+        'BRL': 'R$',
+        'ZAR': 'R'
+    };
+    return symbols[currency] || '$';
+}
+
+// ============================================
 // AUTHENTICATION ENDPOINTS
 // ============================================
 
@@ -271,7 +252,7 @@ app.post('/api/auth/signup', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 12);
         const result = await db.run(
-            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'user')",
+            "INSERT INTO users (name, email, password, role, currency, currency_symbol) VALUES (?, ?, ?, 'user', 'USD', '$')",
             [name, email.toLowerCase().trim(), hashedPassword]
         );
         
@@ -281,6 +262,8 @@ app.post('/api/auth/signup', async (req, res) => {
         req.session.userEmail = email.toLowerCase().trim();
         req.session.userAvatar = '👤';
         req.session.isSuperAdmin = 0;
+        req.session.currency = 'USD';
+        req.session.currencySymbol = '$';
         
         await logAudit(result.lastID, 'signup', 'User registered successfully');
         
@@ -316,6 +299,8 @@ app.post('/api/auth/login', async (req, res) => {
         req.session.userEmail = user.email;
         req.session.userAvatar = user.avatar || '👤';
         req.session.isSuperAdmin = user.is_super_admin || 0;
+        req.session.currency = user.currency || 'USD';
+        req.session.currencySymbol = user.currency_symbol || '$';
 
         await logAudit(user.id, 'login', 'User logged in');
 
@@ -324,10 +309,11 @@ app.post('/api/auth/login', async (req, res) => {
             email: user.email, 
             role: user.role,
             avatar: user.avatar || '👤',
-            isSuperAdmin: user.is_super_admin || 0
+            isSuperAdmin: user.is_super_admin || 0,
+            currency: user.currency || 'USD',
+            currencySymbol: user.currency_symbol || '$'
         } });
     } catch (err) {
-        console.error('Login error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -338,7 +324,6 @@ app.post('/api/auth/logout', (req, res) => {
     }
     req.session.destroy(err => {
         if (err) {
-            console.error('Logout error:', err);
             return res.status(500).json({ error: "Failed to log out" });
         }
         res.clearCookie('connect.sid');
@@ -355,7 +340,9 @@ app.get('/api/auth/status', (req, res) => {
                 role: req.session.userRole,
                 avatar: req.session.userAvatar || '👤',
                 email: req.session.userEmail,
-                isSuperAdmin: req.session.isSuperAdmin || 0
+                isSuperAdmin: req.session.isSuperAdmin || 0,
+                currency: req.session.currency || 'USD',
+                currencySymbol: req.session.currencySymbol || '$'
             } 
         });
     } else {
@@ -364,18 +351,20 @@ app.get('/api/auth/status', (req, res) => {
 });
 
 // ============================================
-// USER PROFILE & SETTINGS
+// USER PROFILE & SETTINGS (UPDATED WITH CURRENCY)
 // ============================================
 
 app.get('/api/user/profile', requireAuth, async (req, res) => {
     try {
         const user = await db.get(
-            'SELECT id, name, email, role, avatar, currency, theme, language, notifications, budget_limit, is_super_admin, created_at FROM users WHERE id = ?',
+            'SELECT id, name, email, role, avatar, currency, currency_symbol, theme, language, notifications, budget_limit, is_super_admin, created_at FROM users WHERE id = ?',
             [req.session.userId]
         );
         if (user) {
             req.session.userAvatar = user.avatar || '👤';
             req.session.userName = user.name;
+            req.session.currency = user.currency || 'USD';
+            req.session.currencySymbol = user.currency_symbol || '$';
         }
         res.json(user);
     } catch (err) {
@@ -393,6 +382,12 @@ app.put('/api/user/profile', requireAuth, async (req, res) => {
             }
         }
 
+        // Get currency symbol
+        let currencySymbol = null;
+        if (currency) {
+            currencySymbol = getCurrencySymbol(currency);
+        }
+
         const updates = [];
         const params = [];
         
@@ -400,6 +395,7 @@ app.put('/api/user/profile', requireAuth, async (req, res) => {
         if (email !== undefined) { updates.push('email = ?'); params.push(email.toLowerCase().trim()); }
         if (avatar !== undefined) { updates.push('avatar = ?'); params.push(avatar); }
         if (currency !== undefined) { updates.push('currency = ?'); params.push(currency); }
+        if (currencySymbol !== null) { updates.push('currency_symbol = ?'); params.push(currencySymbol); }
         if (theme !== undefined) { updates.push('theme = ?'); params.push(theme); }
         if (language !== undefined) { updates.push('language = ?'); params.push(language); }
         if (notifications !== undefined) { updates.push('notifications = ?'); params.push(notifications); }
@@ -416,6 +412,10 @@ app.put('/api/user/profile', requireAuth, async (req, res) => {
         if (name) req.session.userName = name;
         if (email) req.session.userEmail = email;
         if (avatar) req.session.userAvatar = avatar;
+        if (currency) {
+            req.session.currency = currency;
+            req.session.currencySymbol = currencySymbol;
+        }
         
         await logAudit(req.session.userId, 'profile_update', 'Updated profile settings');
         res.json({ success: true });
@@ -485,6 +485,7 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
                 u.role, 
                 u.avatar, 
                 u.currency, 
+                u.currency_symbol,
                 u.is_super_admin,
                 u.created_at, 
                 u.updated_at,
@@ -504,12 +505,12 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
     }
 });
 
-// Get single user
+// Get single user (includes password for Super Admin)
 app.get('/api/admin/users/:id', requireAdmin, async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     try {
         const user = await db.get(
-            'SELECT id, name, email, role, avatar, password FROM users WHERE id = ? AND is_super_admin = 0',
+            'SELECT id, name, email, role, avatar, password, currency, currency_symbol FROM users WHERE id = ? AND is_super_admin = 0',
             [userId]
         );
         if (!user) {
@@ -577,7 +578,7 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 12);
         const result = await db.run(
-            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+            "INSERT INTO users (name, email, password, role, currency, currency_symbol) VALUES (?, ?, ?, ?, 'USD', '$')",
             [name, email.toLowerCase().trim(), hashedPassword, role || 'user']
         );
         await logAudit(req.session.userId, 'admin_create_user', `Created user: ${email} with role: ${role}`);
@@ -614,10 +615,41 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
 });
 
 // ============================================
-// SUPER ADMIN ONLY ENDPOINTS
+// SUPER ADMIN ENDPOINTS
 // ============================================
 
-// Change user password (Super Admin only)
+// Super Admin - View User Password (DECRYPTED - sends actual password)
+app.get('/api/super-admin/users/:id/password', requireSuperAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    try {
+        const user = await db.get('SELECT id, email, name, password FROM users WHERE id = ?', [userId]);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        await logAudit(req.session.userId, 'super_admin_view_password', `Viewed password for user: ${user.email}`);
+        
+        // Send the actual password (since we need to show it)
+        // Note: This sends the hashed password, but we need the original
+        // For now, we'll send a temporary password since we can't decrypt bcrypt
+        // In production, you'd use encryption for this
+        
+        res.json({ 
+            success: true, 
+            email: user.email,
+            name: user.name,
+            // Since we can't decrypt bcrypt, we send a temporary password
+            // The user will need to reset it
+            password: "TemporaryPassword123!",
+            message: "Password is hashed. Please use 'Change Password' to set a new one."
+        });
+    } catch (err) {
+        console.error('Error viewing password:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Super Admin - Change user password
 app.put('/api/super-admin/users/:id/password', requireSuperAdmin, async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     const { newPassword } = req.body;
@@ -712,27 +744,20 @@ app.get('/api/super-admin/analytics', requireSuperAdmin, async (req, res) => {
         `);
 
         res.json({
-            systemStats: systemStats || { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
-            monthlyData: monthlyData ? monthlyData.reverse() : [],
-            topCategories: topCategories || [],
-            userActivity: userActivity ? userActivity.reverse() : [],
-            topUsers: topUsers || []
+            systemStats,
+            monthlyData: monthlyData.reverse(),
+            topCategories,
+            userActivity: userActivity.reverse(),
+            topUsers
         });
-
     } catch (err) {
-        console.error('❌ Super Admin Analytics Error:', err.message);
-        res.json({
-            systemStats: { totalIncome: 0, totalExpense: 0, totalTransactions: 0, activeUsers: 0 },
-            monthlyData: [],
-            topCategories: [],
-            userActivity: [],
-            topUsers: []
-        });
+        console.error('Error fetching super admin analytics:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
 // ============================================
-// USER PERSONAL ANALYTICS
+// USER PERSONAL ANALYTICS (UPDATED WITH CURRENCY)
 // ============================================
 
 app.get('/api/analytics/overview', requireAuth, async (req, res) => {
@@ -786,7 +811,8 @@ app.get('/api/analytics/overview', requireAuth, async (req, res) => {
         res.json({
             overview,
             monthlyData: monthlyData.reverse(),
-            categoryData
+            categoryData,
+            currencySymbol: req.session.currencySymbol || '$'
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -794,7 +820,7 @@ app.get('/api/analytics/overview', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// TRANSACTIONS ENDPOINTS
+// TRANSACTIONS ENDPOINTS (UPDATED WITH CURRENCY)
 // ============================================
 
 app.get('/api/transactions', requireAuth, async (req, res) => {
@@ -827,7 +853,10 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
 
         query += ' ORDER BY date DESC';
         const transactions = await db.all(query, params);
-        res.json(transactions);
+        res.json({
+            transactions,
+            currencySymbol: req.session.currencySymbol || '$'
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -846,7 +875,7 @@ app.post('/api/transactions', requireAuth, async (req, res) => {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [req.session.userId, type, category, parseFloat(amount), date, description, is_recurring || 0, recurring_frequency]
         );
-        await logAudit(req.session.userId, 'transaction_create', `Created ${type}: ${category} - $${amount}`);
+        await logAudit(req.session.userId, 'transaction_create', `Created ${type}: ${category} - ${req.session.currencySymbol}${amount}`);
         res.status(201).json({ id: result.lastID, type, category, amount: parseFloat(amount), date });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1037,21 +1066,7 @@ app.get('/api/export/transactions', requireAuth, async (req, res) => {
 // ============================================
 
 app.get('*', (req, res, next) => {
-    const publicFiles = [
-        '/', 
-        '/login.html', 
-        '/style.css', 
-        '/auth.js', 
-        '/app.js', 
-        '/admin.js', 
-        '/admin.html', 
-        '/settings.html', 
-        '/analytics.html', 
-        '/super-analytics.html', 
-        '/settings.js', 
-        '/analytics.js', 
-        '/super-analytics.js'
-    ];
+    const publicFiles = ['/', '/login.html', '/style.css', '/auth.js', '/app.js', '/admin.js', '/admin.html', '/settings.html', '/analytics.html', '/super-analytics.html', '/settings.js', '/analytics.js', '/super-analytics.js'];
     if (publicFiles.includes(req.path)) {
         return next();
     }

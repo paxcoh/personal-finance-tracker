@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     let isSuperAdmin = false;
     let currentUserId = null;
+    let currencySymbol = '$';
 
     // ===== POPUP TOAST SYSTEM =====
     function showPopupToast(message, type = 'success', title = '') {
@@ -91,11 +92,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.authenticated && data.user.role === 'admin') {
                 isSuperAdmin = data.user.isSuperAdmin || 0;
                 currentUserId = data.user.id;
+                currencySymbol = data.user.currencySymbol || '$';
                 document.getElementById("user-display-name").textContent = data.user.name;
                 document.getElementById("user-avatar").textContent = data.user.avatar || '👤';
                 
                 if (isSuperAdmin) {
                     document.getElementById("super-admin-badge").classList.remove('hidden');
+                    document.getElementById("system-analytics-nav").classList.remove('hidden');
                 }
                 
                 loadAdminDashboard();
@@ -123,14 +126,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (res.ok) {
                 document.getElementById('stat-users').textContent = stats.totalUsers || 0;
                 document.getElementById('stat-transactions').textContent = stats.totalTransactions || 0;
-                document.getElementById('stat-income').textContent = `$${(stats.totalIncome || 0).toFixed(2)}`;
-                document.getElementById('stat-expenses').textContent = `$${(stats.totalExpense || 0).toFixed(2)}`;
+                document.getElementById('stat-income').textContent = `${currencySymbol}${(stats.totalIncome || 0).toFixed(2)}`;
+                document.getElementById('stat-expenses').textContent = `${currencySymbol}${(stats.totalExpense || 0).toFixed(2)}`;
                 
                 if (document.getElementById('stat-users-large')) {
                     document.getElementById('stat-users-large').textContent = stats.totalUsers || 0;
                     document.getElementById('stat-transactions-large').textContent = stats.totalTransactions || 0;
-                    document.getElementById('stat-income-large').textContent = `$${(stats.totalIncome || 0).toFixed(2)}`;
-                    document.getElementById('stat-expenses-large').textContent = `$${(stats.totalExpense || 0).toFixed(2)}`;
+                    document.getElementById('stat-income-large').textContent = `${currencySymbol}${(stats.totalIncome || 0).toFixed(2)}`;
+                    document.getElementById('stat-expenses-large').textContent = `${currencySymbol}${(stats.totalExpense || 0).toFixed(2)}`;
                 }
             }
         } catch (err) {
@@ -138,9 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ============================================
-    // DELETE CONFIRMATION MODAL (FIXED - No alert)
-    // ============================================
+    // ===== DELETE CONFIRMATION MODAL =====
     function showDeleteConfirmation(userId, userName) {
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
@@ -204,9 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // ============================================
-    // LOAD USERS LIST
-    // ============================================
+    // ===== LOAD USERS LIST =====
     async function loadUsersList() {
         try {
             const res = await fetch('/api/admin/users');
@@ -235,23 +234,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (isSuperAdmin) {
                     passwordColumn = `
                         <td class="py-3 text-sm">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded" id="password-display-${u.id}">
-                                    ••••••••
-                                </span>
-                                <button onclick="showPasswordModal(${u.id}, '${u.email}')" 
-                                        class="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-semibold transition-all text-xs px-2 py-1 rounded-lg">
-                                    <i data-lucide="eye" class="w-3 h-3 inline"></i>
-                                </button>
-                                <button onclick="showChangePasswordModal(${u.id}, '${u.email}')" 
-                                        class="bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 text-amber-600 dark:text-amber-400 font-semibold transition-all text-xs px-2 py-1 rounded-lg">
-                                    <i data-lucide="key" class="w-3 h-3 inline"></i>
-                                </button>
-                            </div>
+                            <button onclick="showChangePasswordModal(${u.id}, '${u.email}')" 
+                                    class="bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 text-amber-600 dark:text-amber-400 font-semibold transition-all text-xs px-3 py-1.5 rounded-lg">
+                                <i data-lucide="key" class="w-3 h-3 inline"></i> Change
+                            </button>
+                            <button onclick="showPasswordViewModal(${u.id}, '${u.email}')" 
+                                    class="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-semibold transition-all text-xs px-3 py-1.5 rounded-lg ml-1">
+                                <i data-lucide="eye" class="w-3 h-3 inline"></i> View
+                            </button>
                         </td>
                     `;
                 } else {
-                    passwordColumn = `<td class="py-3 text-sm text-slate-400">🔒 Restricted</td>`;
+                    passwordColumn = `<td class="py-3 text-sm text-slate-400">—</td>`;
                 }
 
                 row.innerHTML = `
@@ -262,10 +256,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td class="py-3 text-sm text-slate-600 dark:text-slate-300">${u.email || 'N/A'}</td>
                     <td class="py-3 text-sm">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            u.is_super_admin === 1 ? 'bg-yellow-50 dark:bg-yellow-950/30 text-yellow-600 dark:text-yellow-400' :
                             u.role === 'admin' ? 'bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400' : 
                             'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
                         }">
-                            ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}
+                            ${u.is_super_admin === 1 ? '👑 Super Admin' : u.role || 'user'}
                         </span>
                         <span class="ml-2 text-xs text-slate-400">${u.transaction_count || 0} txns</span>
                     </td>
@@ -274,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button class="inspect-btn text-indigo-500 hover:text-indigo-400 font-semibold transition-all mr-2" data-id="${u.id}" data-name="${u.name}">
                             <i data-lucide="eye" class="w-4 h-4 inline"></i>
                         </button>
-                        ${isSuperAdmin ? 
+                        ${u.id !== 1 && u.is_super_admin !== 1 && (isSuperAdmin || u.role !== 'admin') ? 
                             `<button class="delete-btn text-red-500 hover:text-red-400 font-semibold transition-all" data-id="${u.id}" data-name="${u.name}">
                                 <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
                             </button>` : ''}
@@ -293,7 +288,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             });
             
-            // FIXED: Delete button uses modal instead of alert
             document.querySelectorAll(".delete-btn").forEach(btn => {
                 btn.addEventListener("click", function(e) {
                     const userId = this.getAttribute("data-id");
@@ -307,43 +301,53 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ============================================
-    // SHOW PASSWORD MODAL
-    // ============================================
-    window.showPasswordModal = function(userId, userEmail) {
+    // ===== SHOW PASSWORD VIEW MODAL =====
+    window.showPasswordViewModal = function(userId, userEmail) {
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
-        modalOverlay.id = 'password-auth-modal';
+        modalOverlay.id = 'password-view-modal';
         
         modalOverlay.innerHTML = `
             <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">🔐 View Password</h3>
-                    <button onclick="closePasswordAuthModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="eye" class="w-6 h-6 text-indigo-500"></i>
+                        View Password
+                    </h3>
+                    <button onclick="closePasswordViewModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all">
                         <i data-lucide="x" class="w-6 h-6"></i>
                     </button>
                 </div>
                 
-                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                    Enter your Super Admin password to view <span class="font-semibold text-indigo-600 dark:text-indigo-400">${userEmail}</span>'s password
-                </p>
+                <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 mb-4">
+                    <p class="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                        Enter your Super Admin password to view <span class="font-semibold">${userEmail}</span>'s password
+                    </p>
+                </div>
                 
-                <form id="password-auth-form" class="space-y-4">
+                <form id="password-view-form" class="space-y-4">
                     <div>
-                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Super Admin Password</label>
+                        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Your Super Admin Password</label>
                         <div class="relative">
                             <input type="password" id="super-admin-password-input" placeholder="Enter your password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
-                            <button type="button" onclick="toggleSuperAdminPassword()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                            <button type="button" onclick="toggleSuperAdminPasswordInput()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
                     
+                    <div id="password-result" class="hidden bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-xl p-4">
+                        <p class="text-xs text-emerald-700 dark:text-emerald-400">🔑 Password</p>
+                        <p id="revealed-password" class="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1"></p>
+                    </div>
+                    
                     <div class="flex gap-3 pt-4">
                         <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/10">
+                            <i data-lucide="eye" class="w-4 h-4 inline mr-2"></i>
                             View Password
                         </button>
-                        <button type="button" onclick="closePasswordAuthModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-xl transition-all">
+                        <button type="button" onclick="closePasswordViewModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-xl transition-all">
                             Cancel
                         </button>
                     </div>
@@ -357,23 +361,23 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (typeof lucide !== 'undefined') lucide.createIcons();
         
-        document.getElementById('password-auth-form').addEventListener('submit', function(e) {
+        document.getElementById('password-view-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const adminPassword = document.getElementById('super-admin-password-input').value;
             if (!adminPassword) {
                 showPopupToast('Please enter your Super Admin password', 'error');
                 return;
             }
-            verifyAndShowPassword(userId, userEmail, adminPassword);
+            viewUserPassword(userId, userEmail, adminPassword);
         });
     };
 
-    window.closePasswordAuthModal = function() {
-        const modal = document.getElementById('password-auth-modal');
+    window.closePasswordViewModal = function() {
+        const modal = document.getElementById('password-view-modal');
         if (modal) modal.remove();
     };
 
-    window.toggleSuperAdminPassword = function() {
+    window.toggleSuperAdminPasswordInput = function() {
         const input = document.getElementById('super-admin-password-input');
         const icon = input.parentElement.querySelector('button i');
         if (input.type === 'password') {
@@ -386,43 +390,43 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
 
-    function verifyAndShowPassword(userId, userEmail, adminPassword) {
-        fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'admin@flow.com', password: adminPassword })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                return fetch(`/api/admin/users/${userId}`);
-            } else {
+    async function viewUserPassword(userId, userEmail, adminPassword) {
+        try {
+            const loginRes = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'admin@flow.com', password: adminPassword })
+            });
+            const loginData = await loginRes.json();
+            
+            if (!loginRes.ok) {
                 showPopupToast('Incorrect Super Admin password!', 'error');
-                closePasswordAuthModal();
-                throw new Error('Authentication failed');
+                return;
             }
-        })
-        .then(res => res.json())
-        .then(userData => {
-            closePasswordAuthModal();
-            const displayElement = document.getElementById(`password-display-${userId}`);
-            if (displayElement) {
-                const tempPass = Math.random().toString(36).slice(-8) + '!@#';
-                displayElement.textContent = tempPass;
-                displayElement.className = 'text-xs font-mono bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded';
-                showPopupToast(`Password for ${userEmail} revealed!`, 'info', '🔐 Password Visible');
+            
+            const res = await fetch(`/api/super-admin/users/${userId}/password`);
+            const data = await res.json();
+            
+            if (data.success) {
+                const resultEl = document.getElementById('password-result');
+                const passwordEl = document.getElementById('revealed-password');
+                passwordEl.textContent = data.password || 'No password found';
+                resultEl.classList.remove('hidden');
+                showPopupToast(`Password for ${userEmail} revealed!`, 'success', '🔐 Password Visible');
+                
+                setTimeout(() => {
+                    resultEl.classList.add('hidden');
+                }, 10000);
+            } else {
+                showPopupToast(data.message || 'Failed to get password', 'error');
             }
-        })
-        .catch(err => {
-            if (err.message !== 'Authentication failed') {
-                showPopupToast('Failed to reveal password', 'error');
-            }
-        });
+        } catch (err) {
+            console.error('Error viewing password:', err);
+            showPopupToast('Failed to view password', 'error');
+        }
     }
 
-    // ============================================
-    // SHOW CHANGE PASSWORD MODAL
-    // ============================================
+    // ===== SHOW CHANGE PASSWORD MODAL =====
     window.showChangePasswordModal = function(userId, userEmail) {
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
@@ -552,7 +556,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Super Admin Password</label>
                         <div class="relative">
                             <input type="password" id="super-admin-password-input" placeholder="Enter your password" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/80 transition-all pr-10" required>
-                            <button type="button" onclick="toggleSuperAdminPassword()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
+                            <button type="button" onclick="toggleSuperAdminPasswordInput()" class="absolute right-3 top-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -605,11 +609,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 closePasswordModal();
                 if (data.success) {
                     showPopupToast(`✅ Password updated for ${userEmail}`, 'success', '🔑 Password Changed');
-                    const displayElement = document.getElementById(`password-display-${userId}`);
-                    if (displayElement) {
-                        displayElement.textContent = '••••••••';
-                        displayElement.className = 'text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded';
-                    }
                 } else {
                     showPopupToast(data.error || 'Failed to change password', 'error');
                 }
@@ -622,9 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // ============================================
-    // INSPECT USER TRANSACTIONS
-    // ============================================
+    // ===== INSPECT USER TRANSACTIONS =====
     async function inspectUserTransactions(userId, userName) {
         try {
             const res = await fetch(`/api/admin/users/${userId}/transactions`);
@@ -661,7 +658,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             </span>
                         </td>
                         <td class="py-3 text-sm font-bold text-right ${t.type === 'income' ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}">
-                            ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
+                            ${t.type === 'income' ? '+' : '-'}${currencySymbol}${t.amount.toFixed(2)}
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -679,9 +676,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ============================================
-    // CLOSE INSPECT PANEL
-    // ============================================
+    // ===== CLOSE INSPECT PANEL =====
     window.closeInspectPanel = function() {
         const inspectSection = document.getElementById("user-inspect-section");
         if (inspectSection) {
@@ -689,9 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // ============================================
-    // CREATE USER
-    // ============================================
+    // ===== CREATE USER =====
     document.getElementById("admin-user-form")?.addEventListener("submit", async (e) => {
         e.preventDefault();
         const name = document.getElementById("admin-reg-name").value;
@@ -744,9 +737,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ============================================
-    // LOGOUT
-    // ============================================
+    // ===== LOGOUT =====
     document.getElementById("btn-admin-logout")?.addEventListener("click", async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
