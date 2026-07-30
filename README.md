@@ -51,7 +51,7 @@ Default Super Admin: admin@flow.com / admin123
 
 
 
-**📁 Project Structure
+📁 Project Structure
 text
 personal-finance-tracker/
 ├── server.js                 # Main application server
@@ -74,19 +74,19 @@ personal-finance-tracker/
     └── super-analytics.js  # System analytics logic
 
 
-**🎯 User Roles
+🎯 User Roles
 
 Role	Capabilities
 User	Manage transactions, personal analytics, profile settings
 Admin	User management, platform overview, system analytics
 Super Admin	All admin features + password viewing, full system control
 
-**🔐 Default Accounts
+🔐 Default Accounts
 Role	Email	Password
 Super Admin	admin@flow.com	admin123
 ⚠️ Important: Change the default password after first login!
 
-**🛠️ Technology Stack
+🛠️ Technology Stack
 Backend
 Node.js - JavaScript runtime
 
@@ -109,7 +109,7 @@ Chart.js - Interactive charts
 
 Lucide Icons - Beautiful icon set
 
-**📊 Database Schema
+📊 Database Schema
 sql
 users:
   - id (INTEGER PRIMARY KEY)
