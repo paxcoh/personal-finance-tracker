@@ -39,19 +39,19 @@ A beautiful, full-featured personal finance management application with multi-us
 ### Installation
 
 1. **Clone the repository**
-```bash
+
 git clone https://github.com/paxcoh/personal-finance-tracker.git
 cd personal-finance-tracker
 
 
-Access the application
+**Access the application
 
 Open your browser: http://localhost:3000
-
 Default Super Admin: admin@flow.com / admin123
 
 
-📁 Project Structure
+
+**📁 Project Structure
 text
 personal-finance-tracker/
 ├── server.js                 # Main application server
@@ -72,17 +72,21 @@ personal-finance-tracker/
     ├── analytics.js        # Personal analytics logic
     ├── settings.js         # Settings logic
     └── super-analytics.js  # System analytics logic
-🎯 User Roles
+
+
+**🎯 User Roles
+
 Role	Capabilities
 User	Manage transactions, personal analytics, profile settings
 Admin	User management, platform overview, system analytics
 Super Admin	All admin features + password viewing, full system control
-🔐 Default Accounts
+
+**🔐 Default Accounts
 Role	Email	Password
 Super Admin	admin@flow.com	admin123
 ⚠️ Important: Change the default password after first login!
 
-🛠️ Technology Stack
+**🛠️ Technology Stack
 Backend
 Node.js - JavaScript runtime
 
@@ -105,7 +109,7 @@ Chart.js - Interactive charts
 
 Lucide Icons - Beautiful icon set
 
-📊 Database Schema
+**📊 Database Schema
 sql
 users:
   - id (INTEGER PRIMARY KEY)
