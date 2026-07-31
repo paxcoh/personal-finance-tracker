@@ -36,7 +36,7 @@ A beautiful, full-featured personal finance management application with multi-us
 - [Node.js](https://nodejs.org/) (v14 or higher)
 - [SQLite](https://www.sqlite.org/) (built-in, no installation needed)
 
-### Installation
+ Installation
 
 1. **Clone the repository**
 
@@ -44,12 +44,11 @@ git clone https://github.com/paxcoh/personal-finance-tracker.git
 cd personal-finance-tracker
 
 
-**Access the application
+Access the application
 
 Open your browser: http://localhost:3000
+
 Default Super Admin: admin@flow.com / admin123
-
-
 
 📁 Project Structure
 text
@@ -72,15 +71,11 @@ personal-finance-tracker/
     ├── analytics.js        # Personal analytics logic
     ├── settings.js         # Settings logic
     └── super-analytics.js  # System analytics logic
-
-
 🎯 User Roles
-
 Role	Capabilities
 User	Manage transactions, personal analytics, profile settings
 Admin	User management, platform overview, system analytics
 Super Admin	All admin features + password viewing, full system control
-
 🔐 Default Accounts
 Role	Email	Password
 Super Admin	admin@flow.com	admin123
@@ -207,11 +202,9 @@ Chart.js for interactive charts
 Lucide Icons for the icon set
 
 📧 Contact
-paxcoh - Email:24pasco@gmail.com
+Your Name - your-email@example.com
 
-Project Link: https://github.com/paxcoh/personal-finance-tracker
+Project Link: https://github.com/yourusername/personal-finance-tracker
 
 ⭐ Show your support
 Give a ⭐️ if this project helped you!
-
-
